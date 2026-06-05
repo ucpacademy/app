@@ -33,18 +33,16 @@ export function AdminForms({
 
   const handleAddBranch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase
-      .from('branches')
-      .insert([
-        {
-          major_id: branchMajorId,
-          slug: branchSlug,
-          title_fr: branchFr,
-          title_ar: branchAr,
-          content_fr: 'Contenu ici',
-          content_ar: 'المحتوى هنا',
-        },
-      ]);
+    const { error } = await supabase.from('branches').insert([
+      {
+        major_id: branchMajorId,
+        slug: branchSlug,
+        title_fr: branchFr,
+        title_ar: branchAr,
+        content_fr: 'Contenu ici',
+        content_ar: 'المحتوى هنا',
+      },
+    ]);
     if (error) alert(error.message);
     else alert(dictionary.branch_added);
   };
