@@ -6,6 +6,7 @@ import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { type Lang } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 export function AuthForm({
   lang,
@@ -70,7 +71,6 @@ export function AuthForm({
 
         // Direct to student area by default, Admin check on layout will take care of Admins navigating elsewhere
         router.push(`/${lang}/student`);
-        router.refresh();
       }
     } catch (err) {
       setMessage(
@@ -136,6 +136,8 @@ export function AuthForm({
                   ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-800'
                   : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-800'
             }`}
+            role="alert"
+            aria-live="polite"
           >
             {message}
           </div>
@@ -208,17 +210,22 @@ export function AuthForm({
             disabled={loading}
             className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium py-3 rounded-xl transition-all shadow-sm mt-2"
           >
-            {loading
-              ? lang === 'fr'
-                ? 'Traitement...'
-                : 'جاري المعالجة...'
-              : mode === 'login'
-                ? lang === 'fr'
-                  ? 'Se connecter'
-                  : 'تسجيل الدخول'
-                : lang === 'fr'
-                  ? 'Créer mon compte'
-                  : 'إنشاء حسابي'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {lang === 'fr' ? 'Traitement...' : 'جاري المعالجة...'}
+              </span>
+            ) : mode === 'login' ? (
+              lang === 'fr' ? (
+                'Se connecter'
+              ) : (
+                'تسجيل الدخول'
+              )
+            ) : lang === 'fr' ? (
+              'Créer mon compte'
+            ) : (
+              'إنشاء حسابي'
+            )}
           </Button>
         </form>
 

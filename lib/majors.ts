@@ -89,3 +89,60 @@ export async function getBranchDetails(branchSlug: string) {
       })
     | null;
 }
+
+export async function getMajorsWithBranches() {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.from('majors').select(`
+      id,
+      slug,
+      translations:major_translations(name,lang),
+      branches(
+        id,
+        slug,
+        featured_image,
+        translations:branch_translations(title,lang)
+      )
+    `);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+export async function getBranchesForSearch() {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('branches')
+    .select('id, slug, translations:branch_translations(title, lang)');
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
+export async function getAdminInquiries() {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('inquiries')
+    .select(
+      `
+      *,
+      branch:branches(
+        slug,
+        translations:branch_translations(title, lang)
+      )
+    `,
+    )
+    .order('status', { ascending: true }) // Pending first
+    .order('created_at', { ascending: false }); // Newest first
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}

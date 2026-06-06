@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getBranchDetails } from '@/lib/majors';
 import { type Lang } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import { InquiryForm } from '@/components/InquiryForm';
@@ -16,22 +16,8 @@ export default async function BranchPage({
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
   const decodedSlug = decodeURIComponent(resolvedParams.slug);
-  const supabase = await createServerSupabaseClient();
 
-  const { data: branch } = await supabase
-    .from('branches')
-    .select(
-      `
-      id,
-      slug,
-      featured_image,
-      gallery,
-      translations:branch_translations(title,lang,benefits,faqs),
-      major:majors(id, translations:major_translations(name,lang))
-    `,
-    )
-    .eq('slug', decodedSlug)
-    .single();
+  const branch = await getBranchDetails(decodedSlug);
 
   if (!branch) notFound();
 

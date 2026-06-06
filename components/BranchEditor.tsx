@@ -6,8 +6,15 @@ import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { type Lang } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  UploadCloud,
+  Image as ImageIcon,
+  Loader2,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { saveBranchAction } from '@/lib/actions';
 
 export function BranchEditor({
   branch,
@@ -32,7 +39,7 @@ export function BranchEditor({
   const router = useRouter();
 
   const translation = branch.translations?.find((t) => t.lang === lang) || {
-    id: undefined,
+    id: null,
     title: '',
     benefits: '',
     faqs: [],
@@ -106,7 +113,7 @@ export function BranchEditor({
     value: string,
   ) => {
     const newFaqs = [...faqs];
-    newFaqs[index][field] = value;
+    newFaqs[index] = { ...newFaqs[index], [field]: value };
     setFaqs(newFaqs);
   };
 
@@ -119,52 +126,38 @@ export function BranchEditor({
     setIsSaving(true);
     setMessage({ text: '', type: '' });
 
-    // 1. Update Branch
-    const { error: branchError } = await supabase
-      .from('branches')
-      .update({ slug, featured_image: featuredImage, gallery })
-      .eq('id', branch.id);
+    try {
+      const res = await saveBranchAction({
+        branchId: branch.id,
+        slug,
+        featuredImage: featuredImage || null,
+        gallery,
+        translationId: translation.id || null,
+        lang,
+        translationData: {
+          title,
+          benefits,
+          faqs: faqs.map((f) => ({ question: f.question, answer: f.answer })), // Strip hidden React metadata
+        },
+      });
 
-    if (branchError) {
+      if (res && res.error) {
+        throw new Error(res.error);
+      }
+
       setMessage({
-        text: `Branch update error: ${branchError.message}`,
+        text: lang === 'fr' ? 'Sauvegardé avec succès !' : 'تم الحفظ بنجاح!',
+        type: 'success',
+      });
+      router.refresh();
+    } catch (error: any) {
+      setMessage({
+        text: error.message || 'Error saving branch',
         type: 'error',
       });
-      setIsSaving(false);
-      return;
     }
 
-    // 2. Update or Insert Translation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const translationData = { title, benefits, faqs: faqs as any };
-
-    if (translation.id) {
-      const { error: translationError } = await supabase
-        .from('branch_translations')
-        .update(translationData)
-        .eq('id', translation.id);
-      if (translationError)
-        return setMessage({
-          text: `Translation error: ${translationError.message}`,
-          type: 'error',
-        });
-    } else {
-      const { error: translationError } = await supabase
-        .from('branch_translations')
-        .insert({ branch_id: branch.id, lang, ...translationData });
-      if (translationError)
-        return setMessage({
-          text: `Translation error: ${translationError.message}`,
-          type: 'error',
-        });
-    }
-
-    setMessage({
-      text: lang === 'fr' ? 'Sauvegardé avec succès !' : 'تم الحفظ بنجاح!',
-      type: 'success',
-    });
     setIsSaving(false);
-    router.refresh();
   };
 
   return (
@@ -236,11 +229,13 @@ export function BranchEditor({
               </div>
               <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-medium rounded-xl transition-colors shadow-sm text-sm">
                 <UploadCloud className="w-4 h-4" />
-                {isUploading
-                  ? '...'
-                  : lang === 'fr'
-                    ? "Changer l'image"
-                    : 'تغيير الصورة'}
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : lang === 'fr' ? (
+                  "Changer l'image"
+                ) : (
+                  'تغيير الصورة'
+                )}
                 <input
                   type="file"
                   accept="image/*"

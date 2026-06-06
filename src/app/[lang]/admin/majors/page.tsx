@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getMajorsWithBranches } from '@/lib/majors';
 import { type Lang } from '@/lib/i18n';
 import Link from 'next/link';
 import { Plus, Edit3, Image as ImageIcon } from 'lucide-react';
@@ -11,20 +11,9 @@ export default async function AdminMajorsPage({
 }) {
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
-  const supabase = await createServerSupabaseClient();
 
   // Fetch all majors wrapped with their associated branches and translations
-  const { data: majors } = await supabase.from('majors').select(`
-      id,
-      slug,
-      translations:major_translations(name,lang),
-      branches(
-        id,
-        slug,
-        featured_image,
-        translations:branch_translations(title,lang)
-      )
-    `);
+  const majors = await getMajorsWithBranches();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -51,8 +40,9 @@ export default async function AdminMajorsPage({
       <div className="grid gap-6 mt-8">
         {majors?.map((major) => {
           const majorName =
-            major.translations.find((t: any) => t.lang === lang)?.name ||
-            major.slug;
+            major.translations.find(
+              (t: { lang: string; name: string }) => t.lang === lang,
+            )?.name || major.slug;
 
           return (
             <div
@@ -86,47 +76,54 @@ export default async function AdminMajorsPage({
                   </p>
                 ) : (
                   <ul className="grid lg:grid-cols-2 gap-4">
-                    {major.branches.map((branch: any) => {
-                      const branchTitle =
-                        branch.translations.find((t: any) => t.lang === lang)
-                          ?.title || branch.slug;
-                      return (
-                        <li
-                          key={branch.id}
-                          className="group flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors bg-white dark:bg-slate-900"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 relative">
-                              {branch.featured_image ? (
-                                <Image
-                                  src={branch.featured_image}
-                                  alt={branchTitle}
-                                  fill
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <ImageIcon className="w-5 h-5 text-slate-400" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-slate-800 dark:text-slate-200">
-                                {branchTitle}
-                              </p>
-                              <p className="text-xs text-slate-400 font-mono mt-1">
-                                {branch.slug}
-                              </p>
-                            </div>
-                          </div>
-                          <Link
-                            href={`/${lang}/admin/branches/${branch.id}`}
-                            className="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-sm px-3 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg transition-opacity hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                    {major.branches.map(
+                      (branch: {
+                        id: string;
+                        slug: string;
+                        featured_image: string | null;
+                        translations: { lang: string; title: string }[];
+                      }) => {
+                        const branchTitle =
+                          branch.translations.find((t) => t.lang === lang)
+                            ?.title || branch.slug;
+                        return (
+                          <li
+                            key={branch.id}
+                            className="group flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors bg-white dark:bg-slate-900"
                           >
-                            <Edit3 className="w-4 h-4" />
-                            {lang === 'fr' ? 'Éditer' : 'تعديل'}
-                          </Link>
-                        </li>
-                      );
-                    })}
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 relative">
+                                {branch.featured_image ? (
+                                  <Image
+                                    src={branch.featured_image}
+                                    alt={branchTitle}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <ImageIcon className="w-5 h-5 text-slate-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {branchTitle}
+                                </p>
+                                <p className="text-xs text-slate-400 font-mono mt-1">
+                                  {branch.slug}
+                                </p>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/${lang}/admin/branches/${branch.id}`}
+                              className="opacity-0 group-hover:opacity-100 flex items-center gap-2 text-sm px-3 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg transition-opacity hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                              {lang === 'fr' ? 'Éditer' : 'تعديل'}
+                            </Link>
+                          </li>
+                        );
+                      },
+                    )}
                   </ul>
                 )}
               </div>

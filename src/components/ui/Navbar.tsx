@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, Menu, X } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import type { Dictionary } from '@/utils/dictionary';
 
@@ -14,6 +15,7 @@ export function Navbar({
   currentLang?: string;
 }) {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Hide Navbar in admin and student dashboard layouts
   if (pathname?.match(/^\/[a-zA-Z0-9-]+\/(admin|student)(\/.*)?$/)) {
@@ -95,7 +97,55 @@ export function Navbar({
             {dict.signup}
           </Link>
         </div>
+
+        {/* Mobile Menu Toggle */}
+        <button
+          className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-600"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-expanded={isMobileMenuOpen}
+          aria-label="Toggle mobile menu"
+        >
+          {isMobileMenuOpen ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
+        </button>
       </div>
+
+      {/* Mobile Navigation Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-4 space-y-4 shadow-xl">
+          <nav className="flex flex-col space-y-2">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href as any}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
+          <div className="flex flex-col space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Link
+              href={`${prefix}/login` as any}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-center text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 rounded-xl transition-colors bg-slate-50 dark:bg-slate-900"
+            >
+              {dict.login}
+            </Link>
+            <Link
+              href={`${prefix}/signup` as any}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-center flex h-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-base font-semibold text-white shadow-sm transition-all"
+            >
+              {dict.signup}
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

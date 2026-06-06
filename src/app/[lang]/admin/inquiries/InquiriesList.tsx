@@ -1,39 +1,72 @@
 'use client';
 
-import { useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import { useOptimistic, useTransition } from 'react';
 import { type Lang } from '@/lib/i18n';
 import { Card } from '@/components/ui/card';
 import { CheckCircle2, Circle, Trash2, Mail, Phone, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { updateInquiryStatus, deleteInquiryAction } from '@/lib/actions';
 
 export function InquiriesList({
   initialInquiries,
   lang,
 }: {
-  initialInquiries: any[];
+  initialInquiries: {
+    id: string;
+    status: string;
+    created_at: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    message?: string | null;
+    branch?: {
+      slug?: string;
+      translations?: { lang: string; title: string }[];
+    };
+  }[];
   lang: Lang;
 }) {
-  const [inquiries, setInquiries] = useState(initialInquiries);
-  const supabase = createBrowserSupabaseClient();
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const toggleStatus = async (id: string, currentStatus: string) => {
+  // React 19 Optimistic State Hook
+  const [optimisticInquiries, addOptimisticInquiry] = useOptimistic(
+    initialInquiries,
+    (state, update: { id: string; action: 'toggle' | 'delete' }) => {
+      if (update.action === 'delete') {
+        return state.filter((inq) => inq.id !== update.id);
+      }
+      if (update.action === 'toggle') {
+        return state.map((inq) =>
+          inq.id === update.id
+            ? {
+                ...inq,
+                status: inq.status === 'pending' ? 'resolved' : 'pending',
+              }
+            : inq,
+        );
+      }
+      return state;
+    },
+  );
+
+  const toggleStatus = (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'pending' ? 'resolved' : 'pending';
-
-    // Optimistic update so the UI feels incredibly fast
-    setInquiries(
-      inquiries.map((inq) =>
-        inq.id === id ? { ...inq, status: newStatus } : inq,
-      ),
-    );
-
-    await supabase.from('inquiries').update({ status: newStatus }).eq('id', id);
-
-    router.refresh();
+    startTransition(async () => {
+      addOptimisticInquiry({ id, action: 'toggle' });
+      const error = await updateInquiryStatus(id, newStatus).catch(() => true);
+      if (error) {
+        alert(
+          lang === 'fr'
+            ? 'Erreur lors de la mise à jour'
+            : 'حدث خطأ أثناء التحديث',
+        );
+      }
+      router.refresh(); // Automatically syncs state back to server truth
+    });
   };
 
-  const deleteInquiry = async (id: string) => {
+  const deleteInquiry = (id: string) => {
     if (
       !confirm(
         lang === 'fr'
@@ -43,16 +76,25 @@ export function InquiriesList({
     )
       return;
 
-    setInquiries(inquiries.filter((inq) => inq.id !== id));
-
-    await supabase.from('inquiries').delete().eq('id', id);
-
-    router.refresh();
+    startTransition(async () => {
+      addOptimisticInquiry({ id, action: 'delete' });
+      const error = await deleteInquiryAction(id).catch(() => true);
+      if (error) {
+        alert(
+          lang === 'fr'
+            ? 'Erreur lors de la suppression'
+            : 'حدث خطأ أثناء الحذف',
+        );
+      }
+      router.refresh();
+    });
   };
 
-  if (inquiries.length === 0) {
+  if (optimisticInquiries.length === 0) {
     return (
-      <Card className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border-dashed border-2">
+      <Card
+        className={`p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border-dashed border-2 ${isPending ? 'opacity-50' : ''}`}
+      >
         {lang === 'fr'
           ? 'Aucune demande pour le moment.'
           : 'لا توجد طلبات في الوقت الحالي.'}
@@ -62,11 +104,10 @@ export function InquiriesList({
 
   return (
     <div className="space-y-4">
-      {inquiries.map((inquiry) => {
+      {optimisticInquiries.map((inquiry) => {
         const isResolved = inquiry.status === 'resolved';
         const branchTitle =
-          inquiry.branch?.translations?.find((t: any) => t.lang === lang)
-            ?.title ||
+          inquiry.branch?.translations?.find((t) => t.lang === lang)?.title ||
           inquiry.branch?.slug ||
           (lang === 'fr' ? 'Branche inconnue' : 'فرع غير معروف');
 

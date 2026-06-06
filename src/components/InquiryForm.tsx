@@ -1,11 +1,36 @@
 'use client';
 
-import { useState } from 'react';
-import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import { useActionState, useEffect, useRef } from 'react';
 import { type Lang } from '@/lib/i18n';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
+import { submitInquiry, type ActionState } from '@/lib/actions';
+import { useFormStatus } from 'react-dom';
+
+function SubmitButton({ lang }: { lang: Lang }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      disabled={pending}
+      className="w-full py-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-lg flex items-center justify-center gap-2 transition-transform active:scale-95 mt-4"
+    >
+      {pending ? (
+        lang === 'fr' ? (
+          'Envoi...'
+        ) : (
+          'جاري الإرسال...'
+        )
+      ) : (
+        <>
+          {lang === 'fr' ? 'Envoyer la demande' : 'إرسال الطلب'}
+          <Send className="w-5 h-5" />
+        </>
+      )}
+    </Button>
+  );
+}
 
 export function InquiryForm({
   branchId,
@@ -14,56 +39,35 @@ export function InquiryForm({
   branchId: string;
   lang: Lang;
 }) {
-  const supabase = createBrowserSupabaseClient();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<{
-    text: string;
-    type: 'success' | 'error';
-  } | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setMessage(null);
-
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
-    const phone = formData.get('phone') as string;
-    const msg = formData.get('message') as string;
-
-    // Get user id if logged in
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    const { error } = await supabase.from('inquiries').insert({
-      branch_id: branchId,
-      user_id: user?.id || null,
-      name,
-      email,
-      phone,
-      message: msg,
-      status: 'pending',
-    });
-
-    if (error) {
-      setMessage({
-        text: lang === 'fr' ? 'Une erreur est survenue.' : 'حدث خطأ.',
-        type: 'error',
-      });
-    } else {
-      setMessage({
-        text:
-          lang === 'fr'
-            ? 'Votre demande a été envoyée avec succès !'
-            : 'تم إرسال طلبك بنجاح!',
-        type: 'success',
-      });
-      (e.target as HTMLFormElement).reset();
-    }
-    setIsSubmitting(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const initialState: ActionState = {
+    success: false,
+    error: false,
+    timestamp: 0,
   };
+  const [state, formAction] = useActionState(submitInquiry, initialState);
+
+  useEffect(() => {
+    if (state.success) {
+      formRef.current?.reset();
+    }
+  }, [state.timestamp, state.success]);
+
+  let message = null;
+  if (state.success) {
+    message = {
+      type: 'success',
+      text:
+        lang === 'fr'
+          ? 'Votre demande a été envoyée avec succès !'
+          : 'تم إرسال طلبك بنجاح!',
+    };
+  } else if (state.error) {
+    message = {
+      type: 'error',
+      text: lang === 'fr' ? 'Une erreur est survenue.' : 'حدث خطأ.',
+    };
+  }
 
   return (
     <Card className="p-8 border-slate-200 dark:border-slate-800 shadow-xl shadow-indigo-500/5 bg-white dark:bg-slate-900 rounded-3xl">
@@ -86,7 +90,8 @@ export function InquiryForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form ref={formRef} action={formAction} className="space-y-5">
+        <input type="hidden" name="branchId" value={branchId} />
         <div>
           <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
             {lang === 'fr' ? 'Nom complet' : 'الاسم الكامل'}
@@ -133,24 +138,7 @@ export function InquiryForm({
             placeholder={lang === 'fr' ? 'Vos questions...' : 'أسئلتك...'}
           />
         </div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full py-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-lg flex items-center justify-center gap-2 transition-transform active:scale-95 mt-4"
-        >
-          {isSubmitting ? (
-            lang === 'fr' ? (
-              'Envoi...'
-            ) : (
-              'جاري الإرسال...'
-            )
-          ) : (
-            <>
-              {lang === 'fr' ? 'Envoyer la demande' : 'إرسال الطلب'}
-              <Send className="w-5 h-5" />
-            </>
-          )}
-        </Button>
+        <SubmitButton lang={lang} />
       </form>
     </Card>
   );

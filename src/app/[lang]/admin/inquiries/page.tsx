@@ -1,6 +1,6 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { type Lang } from '@/lib/i18n';
 import { InquiriesList } from './InquiriesList';
+import { getAdminInquiries } from '@/lib/majors';
 
 export default async function AdminInquiriesPage({
   params,
@@ -9,22 +9,8 @@ export default async function AdminInquiriesPage({
 }) {
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
-  const supabase = await createServerSupabaseClient();
 
-  // Fetch all inquiries and join the specific branch translations to display the branch name
-  const { data: inquiries } = await supabase
-    .from('inquiries')
-    .select(
-      `
-      *,
-      branch:branches(
-        slug,
-        translations:branch_translations(title, lang)
-      )
-    `,
-    )
-    .order('status', { ascending: true }) // Pending first
-    .order('created_at', { ascending: false }); // Newest first
+  const inquiries = await getAdminInquiries();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -39,7 +25,7 @@ export default async function AdminInquiriesPage({
         </p>
       </div>
 
-      <InquiriesList initialInquiries={inquiries || []} lang={lang} />
+      <InquiriesList initialInquiries={inquiries} lang={lang} />
     </div>
   );
 }

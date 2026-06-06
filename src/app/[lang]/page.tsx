@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getDictionary, type Lang } from '@/utils/dictionary';
+import { getBranchesForSearch } from '@/lib/majors';
 import { BranchSearch } from '@/components/BranchSearch';
 import { Award, BookOpen, ShieldCheck, Users, ArrowRight } from 'lucide-react';
 
@@ -13,7 +14,11 @@ export default async function HomePage({
 }) {
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
-  const dictionary = await getDictionary(lang);
+
+  const [dictionary, initialBranches] = await Promise.all([
+    getDictionary(lang),
+    getBranchesForSearch(),
+  ]);
 
   return (
     <div className="relative flex flex-col min-h-screen overflow-hidden">
@@ -48,7 +53,7 @@ export default async function HomePage({
         </p>
 
         <div className="w-full max-w-3xl relative z-50">
-          <BranchSearch lang={lang as any} />
+          <BranchSearch lang={lang} initialBranches={initialBranches} />
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-6 mt-16">
