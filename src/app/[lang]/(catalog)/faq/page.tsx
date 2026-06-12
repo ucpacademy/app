@@ -77,49 +77,53 @@ export default function FAQPage({ lang }: { lang: Lang }) {
         </div>
 
         {Object.keys(faqsByCategory).length === 0 ? (
-          <Card className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900">
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900">
             {dict.empty}
-          </Card>
+          </div>
         ) : (
           <div className="space-y-8">
-            {Object.entries(faqsByCategory).map(([category, categoryFaqs]) => (
-              <div key={category}>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-                  {category}
-                </h2>
-                <div className="space-y-3">
-                  {categoryFaqs.map((faq) => (
-                    <Card
-                      key={faq.id}
-                      className="overflow-hidden bg-white dark:bg-slate-900 cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() =>
-                        setExpandedId(expandedId === faq.id ? null : faq.id)
-                      }
-                    >
-                      <div className="p-6">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-bold text-slate-900 dark:text-white pr-4">
-                            {lang === 'fr' ? faq.question_fr : faq.question_ar}
-                          </h3>
-                          <ChevronDown
-                            className={`w-5 h-5 text-slate-600 dark:text-slate-400 flex-shrink-0 transition-transform ${
-                              expandedId === faq.id
-                                ? 'transform rotate-180'
-                                : ''
-                            }`}
-                          />
+            {(Object.entries(faqsByCategory) as Array<[string, any[]]>).map(
+              ([category, categoryFaqs]) => (
+                <div key={category}>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                    {category}
+                  </h2>
+                  <div className="space-y-3">
+                    {categoryFaqs.map((faq) => (
+                      <div
+                        key={faq.id}
+                        className="overflow-hidden bg-white dark:bg-slate-900 cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() =>
+                          setExpandedId(expandedId === faq.id ? null : faq.id)
+                        }
+                      >
+                        <div className="p-6">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 dark:text-white pr-4">
+                              {lang === 'fr'
+                                ? faq.question_fr
+                                : faq.question_ar}
+                            </h3>
+                            <ChevronDown
+                              className={`w-5 h-5 text-slate-600 dark:text-slate-400 flex-shrink-0 transition-transform ${
+                                expandedId === faq.id
+                                  ? 'transform rotate-180'
+                                  : ''
+                              }`}
+                            />
+                          </div>
+                          {expandedId === faq.id && (
+                            <p className="mt-4 text-slate-600 dark:text-slate-400">
+                              {lang === 'fr' ? faq.answer_fr : faq.answer_ar}
+                            </p>
+                          )}
                         </div>
-                        {expandedId === faq.id && (
-                          <p className="mt-4 text-slate-600 dark:text-slate-400">
-                            {lang === 'fr' ? faq.answer_fr : faq.answer_ar}
-                          </p>
-                        )}
                       </div>
-                    </Card>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         )}
       </section>

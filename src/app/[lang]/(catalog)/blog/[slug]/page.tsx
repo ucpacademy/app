@@ -34,7 +34,7 @@ export default async function BlogPostPage({
             {lang === 'fr' ? 'Article non trouvé' : 'لم يتم العثور على المقالة'}
           </p>
           <Link
-            href={`/${lang}/(catalog)/blog`}
+            href={`/${lang}/blog` as any}
             className="text-indigo-600 dark:text-indigo-400 hover:underline"
           >
             {lang === 'fr' ? 'Retour au blog' : 'العودة إلى المدونة'}
@@ -53,7 +53,7 @@ export default async function BlogPostPage({
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Back Link */}
         <Link
-          href={`/${lang}/(catalog)/blog`}
+          href={`/${lang}/blog` as any}
           className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm mb-8 flex items-center gap-1"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -143,7 +143,7 @@ export default async function BlogPostPage({
               {lang === 'fr' ? 'Articles Recommandés' : 'المقالات الموصى بها'}
             </h2>
             <Link
-              href={`/${lang}/(catalog)/blog`}
+              href={`/${lang}/blog` as any}
               className="text-indigo-600 dark:text-indigo-400 hover:underline"
             >
               {lang === 'fr'

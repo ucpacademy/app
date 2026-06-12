@@ -91,6 +91,17 @@ CREATE TABLE branch_translations (
   UNIQUE(branch_id, lang)
 );
 
+-- 6b. Major Translations (Multi-language content for majors)
+CREATE TABLE major_translations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  major_id UUID NOT NULL REFERENCES majors(id) ON DELETE CASCADE,
+  lang VARCHAR NOT NULL CHECK (lang IN ('fr', 'ar')),
+  name VARCHAR NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(major_id, lang)
+);
+
 -- 5. Programs Table (Educational programs offered)
 CREATE TABLE programs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -357,6 +368,78 @@ CREATE INDEX idx_lessons_course_id ON lessons(course_id);
 CREATE INDEX idx_lessons_module_id ON lessons(module_id);
 CREATE INDEX idx_lesson_progress_user_id ON lesson_progress(user_id);
 CREATE INDEX idx_lesson_progress_lesson_id ON lesson_progress(lesson_id);
+
+-- ==================== TRIGGERS & FUNCTIONS ====================
+
+-- Trigger to create profile on auth.users insert
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.user_metadata->>'full_name', ''),
+    'student'
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- RPC function to add a major with translations
+CREATE OR REPLACE FUNCTION public.add_major(
+  p_slug VARCHAR,
+  p_name_fr VARCHAR,
+  p_name_ar VARCHAR
+)
+RETURNS UUID AS $$
+DECLARE
+  v_major_id UUID;
+BEGIN
+  -- Insert major
+  INSERT INTO majors (slug, name_fr, name_ar)
+  VALUES (p_slug, p_name_fr, p_name_ar)
+  RETURNING id INTO v_major_id;
+
+  -- Insert translations
+  INSERT INTO major_translations (major_id, lang, name)
+  VALUES
+    (v_major_id, 'fr', p_name_fr),
+    (v_major_id, 'ar', p_name_ar);
+
+  RETURN v_major_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- RPC function to add a branch with translations
+CREATE OR REPLACE FUNCTION public.add_branch(
+  p_major_id UUID,
+  p_slug VARCHAR,
+  p_title_fr VARCHAR,
+  p_title_ar VARCHAR
+)
+RETURNS UUID AS $$
+DECLARE
+  v_branch_id UUID;
+BEGIN
+  -- Insert branch
+  INSERT INTO branches (major_id, slug, title_fr, title_ar)
+  VALUES (p_major_id, p_slug, p_title_fr, p_title_ar)
+  RETURNING id INTO v_branch_id;
+
+  -- Insert translations
+  INSERT INTO branch_translations (branch_id, lang, title)
+  VALUES
+    (v_branch_id, 'fr', p_title_fr),
+    (v_branch_id, 'ar', p_title_ar);
+
+  RETURN v_branch_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ==================== ROW LEVEL SECURITY ====================
 

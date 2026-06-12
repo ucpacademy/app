@@ -12,11 +12,11 @@ export const revalidate = 60;
 export default async function BranchPage({
   params,
 }: {
-  params: Promise<{ lang: string; slug: string }>;
+  params: Promise<{ lang: string; branchSlug: string }>;
 }) {
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
-  const decodedSlug = decodeURIComponent(resolvedParams.slug);
+  const decodedSlug = decodeURIComponent(resolvedParams.branchSlug);
 
   const branch = await getBranchDetails(decodedSlug);
 
