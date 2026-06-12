@@ -38,6 +38,10 @@ export function Navbar({
 
   const navLinks = [
     { name: isFr ? 'Filières' : 'التخصصات', href: `${prefix}/majors` },
+    {
+      name: isFr ? 'Institutions' : 'المؤسسات',
+      href: `${prefix}/institutions`,
+    },
     { name: isFr ? 'Admissions' : 'القبول', href: `#` },
     { name: isFr ? 'Campus' : 'الحرم الجامعي', href: `#` },
     {

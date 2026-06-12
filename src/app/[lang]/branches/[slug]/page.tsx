@@ -3,6 +3,7 @@ import { getBranchDetails } from '@/lib/majors';
 import { type Lang } from '@/lib/i18n';
 import { notFound } from 'next/navigation';
 import { InquiryForm } from '@/components/InquiryForm';
+import { ProgramRegistrationButton } from '@/components/ProgramRegistrationButton';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 

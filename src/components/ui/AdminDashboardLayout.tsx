@@ -6,7 +6,11 @@ import {
   GraduationCap,
   MessageSquare,
   Users,
-  Settings,
+  BookOpen,
+  Calendar,
+  Star,
+  HelpCircle,
+  Building2,
 } from 'lucide-react';
 
 export function AdminDashboardLayout({
@@ -19,28 +23,53 @@ export function AdminDashboardLayout({
   const navItems = [
     {
       name: lang === 'fr' ? 'Tableau de bord' : 'لوحة القيادة',
-      href: `/${lang}/admin`,
+      href: `/${lang}/(dashboard)/admin/dashboard`,
       icon: LayoutDashboard,
     },
     {
-      name: lang === 'fr' ? 'Filières & Branches' : 'التخصصات والفروع',
-      href: `/${lang}/admin/majors`,
+      name: lang === 'fr' ? 'Majeurs' : 'التخصصات',
+      href: `/${lang}/(dashboard)/admin/majors`,
       icon: GraduationCap,
     },
     {
-      name: lang === 'fr' ? 'Demandes' : 'الاستفسارات',
-      href: `/${lang}/admin/inquiries`,
+      name: lang === 'fr' ? 'Institutions' : 'المؤسسات',
+      href: `/${lang}/(dashboard)/admin/institutions`,
+      icon: Building2,
+    },
+    {
+      name: lang === 'fr' ? 'Programmes' : 'البرامج',
+      href: `/${lang}/(dashboard)/admin/programs`,
+      icon: BookOpen,
+    },
+    {
+      name: lang === 'fr' ? 'Événements' : 'الأحداث',
+      href: `/${lang}/(dashboard)/admin/events/list`,
+      icon: Calendar,
+    },
+    {
+      name: lang === 'fr' ? 'Blog' : 'المدونة',
+      href: `/${lang}/(dashboard)/admin/blog/list`,
       icon: MessageSquare,
     },
     {
-      name: lang === 'fr' ? 'Étudiants (Bientôt)' : 'الطلاب (قريباً)',
-      href: `/${lang}/admin/students`,
-      icon: Users,
+      name: lang === 'fr' ? 'Avis' : 'التقييمات',
+      href: `/${lang}/(dashboard)/admin/reviews/list`,
+      icon: Star,
     },
     {
-      name: lang === 'fr' ? 'Paramètres (Bientôt)' : 'الإعدادات (قريباً)',
-      href: `/${lang}/admin/settings`,
-      icon: Settings,
+      name: lang === 'fr' ? 'FAQ' : 'الأسئلة المتكررة',
+      href: `/${lang}/(dashboard)/admin/faqs/list`,
+      icon: HelpCircle,
+    },
+    {
+      name: lang === 'fr' ? 'Demandes' : 'الاستفسارات',
+      href: `/${lang}/(dashboard)/admin/inquiries/advanced`,
+      icon: MessageSquare,
+    },
+    {
+      name: lang === 'fr' ? 'Utilisateurs' : 'المستخدمون',
+      href: `/${lang}/(dashboard)/admin/users`,
+      icon: Users,
     },
   ];
 
@@ -48,7 +77,7 @@ export function AdminDashboardLayout({
     <DashboardLayout
       navItems={navItems}
       lang={lang}
-      title={lang === 'fr' ? 'Admin Excel' : 'مسؤول إكسل'}
+      title={lang === 'fr' ? 'Admin Panel' : 'لوحة التحكم'}
     >
       {children}
     </DashboardLayout>

@@ -55,12 +55,26 @@ export async function getBranchesForMajor(majorId: string) {
   >;
 }
 
+export async function getBranches() {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from('branches')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
 export async function getBranchDetails(branchSlug: string) {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from('branches')
     .select(
-      '*, major:majors(id, slug, translations:major_translations(name, lang)), translations:branch_translations(title, lang, content, benefits, faqs)',
+      '*, major:majors(id, slug, translations:major_translations(name, lang)), translations:branch_translations(title, lang, content, benefits, faqs), programs:programs(id,title_fr,title_ar,description_fr,description_ar,duration_months,capacity,price_usd,status,institution:institutions(id,slug,name_fr,name_ar,location_fr,location_ar,website))',
     )
     .eq('slug', branchSlug)
     .single();
@@ -85,6 +99,26 @@ export async function getBranchDetails(branchSlug: string) {
           lang: string;
           benefits?: string;
           faqs?: unknown;
+        }>;
+        programs?: Array<{
+          id: string;
+          title_fr: string;
+          title_ar: string;
+          description_fr?: string | null;
+          description_ar?: string | null;
+          duration_months?: number | null;
+          capacity?: number | null;
+          price_usd?: number | null;
+          status: string;
+          institution?: {
+            id: string;
+            slug: string;
+            name_fr: string;
+            name_ar: string;
+            location_fr?: string | null;
+            location_ar?: string | null;
+            website?: string | null;
+          } | null;
         }>;
       })
     | null;
