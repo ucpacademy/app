@@ -1,9 +1,6 @@
-import {
-  getDictionary,
-  type Lang,
-  type Dictionary,
-  languages,
-} from '@/utils/dictionary';
+import { getDictionary, type Lang, type Dictionary } from '@/utils/dictionary';
+
+const languages = ['en', 'fr', 'ar'] as const;
 
 export type { Lang, Dictionary };
 export { getDictionary, languages };

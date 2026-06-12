@@ -19,7 +19,7 @@ export default async function AdminNewInstitutionPage({
             ? 'Créez une nouvelle institution pour héberger des programmes et guider les enseignants.'
             : 'أنشئ مؤسسة جديدة لاستضافة البرامج وإرشاد المعلمين.'}
         </p>
-        <NewInstitutionForm lang={lang} />
+        <NewInstitutionForm lang={lang as Lang} />
       </div>
     </div>
   );
