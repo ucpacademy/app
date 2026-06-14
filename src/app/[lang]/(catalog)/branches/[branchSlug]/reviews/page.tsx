@@ -118,7 +118,7 @@ export default function ReviewsPage({
           <p className="text-slate-600 dark:text-slate-400 mb-4">
             {lang === 'fr' ? 'Branche non trouvée' : 'لم يتم العثور على الفرع'}
           </p>
-          <Link href={`/${lang}/(catalog)/branches`}>
+          <Link href={`/${lang}/branches` as any}>
             <Button>{dict.backToDetail}</Button>
           </Link>
         </Card>

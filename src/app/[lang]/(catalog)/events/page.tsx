@@ -62,7 +62,7 @@ export default async function EventsPage({
               return (
                 <Link
                   key={event.id}
-                  href={`/${lang}/(catalog)/events/${event.id}`}
+                  href={`/${lang}/events/${event.id}` as any}
                 >
                   <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer bg-white dark:bg-slate-900">
                     <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">

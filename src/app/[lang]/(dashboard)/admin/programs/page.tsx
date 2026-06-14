@@ -1,4 +1,4 @@
-import { AdminProgramsList } from '@/components/AdminProgramsList';
+import { ProgramsList } from '@/components/AdminProgramsList';
 import { getAdminPrograms } from '@/lib/education';
 import { type Lang } from '@/lib/i18n';
 
@@ -25,7 +25,7 @@ export default async function AdminProgramsPage({
         </div>
       </div>
 
-      <AdminProgramsList initialPrograms={programs} />
+      <ProgramsList initialPrograms={programs} />
     </div>
   );
 }

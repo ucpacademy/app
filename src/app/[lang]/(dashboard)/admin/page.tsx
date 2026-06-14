@@ -23,7 +23,7 @@ export default async function AdminDashboard({
   }
 
   const { data: userData, error: userErrorDb } = await supabase
-    .from('users')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();

@@ -40,7 +40,7 @@ export default async function AdminBlogPage({
     query = query.eq('status', status);
   }
 
-  const { data: posts } = await query;
+  const { data: posts } = (await query) as any;
 
   const translations = {
     title: lang === 'fr' ? 'Blog' : 'المدونة',
@@ -57,7 +57,7 @@ export default async function AdminBlogPage({
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
             {translations.title}
           </h1>
-          <Link href={`/${lang}/(dashboard)/admin/blog/new`}>
+          <Link href={`/${lang}/admin/blog/new` as any}>
             <Button className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               {translations.add}
@@ -151,7 +151,7 @@ export default async function AdminBlogPage({
                   >
                     {post.status}
                   </span>
-                  <Link href={`/${lang}/(dashboard)/admin/blog/${post.id}`}>
+                  <Link href={`/${lang}/admin/blog/${post.id}` as any}>
                     <Button variant="outline" size="sm">
                       {lang === 'fr' ? 'Modifier' : 'تعديل'}
                     </Button>

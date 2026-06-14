@@ -128,7 +128,7 @@ export default function EventDetailPage({
           <p className="text-slate-600 dark:text-slate-400 mb-4">
             {lang === 'fr' ? 'Événement non trouvé' : 'لم يتم العثور على الحدث'}
           </p>
-          <Link href={`/${lang}/(catalog)/events`}>
+          <Link href={`/${lang}/events` as any}>
             <Button>{dict.backLabel}</Button>
           </Link>
         </Card>
@@ -146,7 +146,7 @@ export default function EventDetailPage({
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-black">
       <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <Link
-          href={`/${lang}/(catalog)/events`}
+          href={`/${lang}/events` as any}
           className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm mb-6 block"
         >
           ← {dict.backLabel}

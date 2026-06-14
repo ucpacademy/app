@@ -14,7 +14,7 @@ export default async function BlogPage({
   const dict = await getDictionary(lang);
   const supabase = await createServerSupabaseClient();
 
-  const { data: posts, error } = await supabase
+  const { data: posts, error } = (await supabase
     .from('blog_posts')
     .select(
       `
@@ -31,7 +31,7 @@ export default async function BlogPage({
     `,
     )
     .eq('status', 'published')
-    .order('published_at', { ascending: false });
+    .order('published_at', { ascending: false })) as any;
 
   const title = lang === 'fr' ? 'Blog' : 'المدونة';
   const description =
@@ -63,7 +63,9 @@ export default async function BlogPage({
             {/* Featured Post */}
             {posts[0] && (
               <Link
-                href={`/${lang}/(catalog)/blog/${posts[0][lang === 'fr' ? 'slug_fr' : 'slug_ar']}`}
+                href={
+                  `/${lang}/blog/${posts[0][lang === 'fr' ? 'slug_fr' : 'slug_ar']}` as any
+                }
               >
                 <Card className="overflow-hidden hover:shadow-xl transition-shadow cursor-pointer bg-white dark:bg-slate-900 h-full">
                   <div className="md:flex h-full">
@@ -122,10 +124,12 @@ export default async function BlogPage({
             {/* Other Posts Grid */}
             {posts.length > 1 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {posts.slice(1).map((post) => (
+                {posts.slice(1).map((post: any) => (
                   <Link
                     key={post.id}
-                    href={`/${lang}/(catalog)/blog/${post[lang === 'fr' ? 'slug_fr' : 'slug_ar']}`}
+                    href={
+                      `/${lang}/blog/${post[lang === 'fr' ? 'slug_fr' : 'slug_ar']}` as any
+                    }
                   >
                     <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer bg-white dark:bg-slate-900 flex flex-col">
                       {post.featured_image && (

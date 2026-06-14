@@ -14,7 +14,7 @@ export default async function ProgramsPage({
   const dict = await getDictionary(lang);
   const supabase = await createServerSupabaseClient();
 
-  const { data: programs, error } = await supabase
+  const { data: programs, error } = (await supabase
     .from('programs')
     .select(
       `
@@ -30,7 +30,7 @@ export default async function ProgramsPage({
     `,
     )
     .eq('status', 'published')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })) as any;
 
   const title = lang === 'fr' ? "Programmes d'études" : 'برامج التدريس';
   const description =
@@ -59,7 +59,7 @@ export default async function ProgramsPage({
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {programs.map((program) => (
+            {programs.map((program: any) => (
               <Link
                 key={program.id}
                 href={`/${lang}/branches/${program.branch.slug}#programs`}
