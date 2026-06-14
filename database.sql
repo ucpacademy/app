@@ -337,7 +337,7 @@ CREATE TABLE contact_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ==================== INDEXES FOR PERFORMANCE ====================
+-- ==================== INDEXES FOR PERFORMANCE =====================
 
 CREATE INDEX idx_branches_major_id ON branches(major_id);
 CREATE INDEX idx_branches_slug ON branches(slug);
