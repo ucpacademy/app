@@ -3,13 +3,20 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Menu,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+} from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 export interface NavItem {
   name: string;
-  href: string;
+  href?: string;
   icon: React.ElementType;
+  subItems?: { name: string; href: string }[];
 }
 
 export function DashboardLayout({
@@ -25,6 +32,7 @@ export function DashboardLayout({
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileOpen, setMobileOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const router = useRouter();
   const [supabase] = useState(() => createBrowserSupabaseClient());
@@ -34,6 +42,14 @@ export function DashboardLayout({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMobileOpen(false);
   }, [pathname]);
+
+  const toggleMenu = (name: string, defaultState: boolean) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [name]: prev[name] !== undefined ? !prev[name] : !defaultState,
+    }));
+    if (!isSidebarOpen) setSidebarOpen(true);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -83,11 +99,62 @@ export function DashboardLayout({
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = item.href
+              ? pathname === item.href
+              : item.subItems?.some((sub) => pathname === sub.href);
+            const isMenuOpen = openMenus[item.name] ?? isActive;
+
+            if (item.subItems) {
+              return (
+                <div key={item.name} className="space-y-1">
+                  <button
+                    onClick={() => toggleMenu(item.name, isActive || false)}
+                    className={`flex w-full items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title={!isSidebarOpen ? item.name : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+                      />
+                      {(isSidebarOpen || isMobileOpen) && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </div>
+                    {(isSidebarOpen || isMobileOpen) && (
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
+                      />
+                    )}
+                  </button>
+                  {(isSidebarOpen || isMobileOpen) && isMenuOpen && (
+                    <div className="pl-11 pr-3 space-y-1 py-1">
+                      {item.subItems.map((sub) => (
+                        <Link
+                          key={sub.name}
+                          href={sub.href as any}
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            pathname === sub.href
+                              ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                          }`}
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.name}
-                href={item.href as any}
+                href={(item.href || '#') as any}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
@@ -133,7 +200,11 @@ export function DashboardLayout({
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white truncate">
-              {navItems.find((item) => item.href === pathname)?.name || title}
+              {navItems
+                .flatMap((item) =>
+                  item.subItems ? [item, ...item.subItems] : [item],
+                )
+                .find((item) => item.href === pathname)?.name || title}
             </h1>
           </div>
           <div className="flex items-center gap-4">

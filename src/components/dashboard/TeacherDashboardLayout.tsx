@@ -2,7 +2,7 @@
 
 import { AuthGuard } from '../auth/AuthGuard';
 import { DashboardLayout } from '../ui/DashboardLayout';
-import { LayoutDashboard, BookOpen, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, BookOpen } from 'lucide-react';
 
 export function TeacherDashboardLayout({
   children,
@@ -18,14 +18,18 @@ export function TeacherDashboardLayout({
       icon: LayoutDashboard,
     },
     {
-      name: lang === 'fr' ? 'Mes Programmes' : 'برامجي',
-      href: `/${lang}/teacher/programs`,
+      name: lang === 'fr' ? 'Programmes' : 'البرامج',
       icon: BookOpen,
-    },
-    {
-      name: lang === 'fr' ? 'Nouveau Programme' : 'برنامج جديد',
-      href: `/${lang}/teacher/programs/new`,
-      icon: PlusCircle,
+      subItems: [
+        {
+          name: lang === 'fr' ? 'Mes Programmes' : 'برامجي',
+          href: `/${lang}/teacher/programs`,
+        },
+        {
+          name: lang === 'fr' ? 'Nouveau Programme' : 'برنامج جديد',
+          href: `/${lang}/teacher/programs/new`,
+        },
+      ],
     },
   ];
 

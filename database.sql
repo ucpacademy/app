@@ -107,6 +107,7 @@ CREATE TABLE programs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
   institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL,
+  instructor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   title_fr VARCHAR NOT NULL,
   title_ar VARCHAR NOT NULL,
   description_fr TEXT,
@@ -371,6 +372,7 @@ CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_event_date ON events(event_date);
 CREATE INDEX idx_event_registrations_event_id ON event_registrations(event_id);
 CREATE INDEX idx_institution_memberships_institution_id ON institution_memberships(institution_id);
+CREATE INDEX idx_programs_instructor_id ON programs(instructor_id);
 CREATE INDEX idx_programs_institution_id ON programs(institution_id);
 CREATE INDEX idx_courses_program_id ON courses(program_id);
 CREATE INDEX idx_course_modules_course_id ON course_modules(course_id);
