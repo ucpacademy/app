@@ -7,7 +7,13 @@ import {
   MessageSquare,
   Users,
   Settings,
+  BookOpen,
+  Calendar,
+  Star,
+  HelpCircle,
+  Building2,
 } from 'lucide-react';
+import { AuthGuard } from '../auth/AuthGuard';
 
 export function AdminDashboardLayout({
   children,
@@ -23,9 +29,39 @@ export function AdminDashboardLayout({
       icon: LayoutDashboard,
     },
     {
-      name: lang === 'fr' ? 'Filières & Branches' : 'التخصصات والفروع',
+      name: lang === 'fr' ? 'Majeurs & Branches' : 'التخصصات والفروع',
       href: `/${lang}/admin/majors`,
       icon: GraduationCap,
+    },
+    {
+      name: lang === 'fr' ? 'Institutions' : 'المؤسسات',
+      href: `/${lang}/admin/institutions`,
+      icon: Building2,
+    },
+    {
+      name: lang === 'fr' ? 'Programmes' : 'البرامج',
+      href: `/${lang}/admin/programs`,
+      icon: BookOpen,
+    },
+    {
+      name: lang === 'fr' ? 'Événements' : 'الأحداث',
+      href: `/${lang}/admin/events/list`,
+      icon: Calendar,
+    },
+    {
+      name: lang === 'fr' ? 'Blog' : 'المدونة',
+      href: `/${lang}/admin/blog/list`,
+      icon: MessageSquare,
+    },
+    {
+      name: lang === 'fr' ? 'Avis' : 'التقييمات',
+      href: `/${lang}/admin/reviews/list`,
+      icon: Star,
+    },
+    {
+      name: lang === 'fr' ? 'FAQ' : 'الأسئلة المتكررة',
+      href: `/${lang}/admin/faqs/list`,
+      icon: HelpCircle,
     },
     {
       name: lang === 'fr' ? 'Demandes' : 'الاستفسارات',
@@ -45,12 +81,14 @@ export function AdminDashboardLayout({
   ];
 
   return (
-    <DashboardLayout
-      navItems={navItems}
-      lang={lang}
-      title={lang === 'fr' ? 'Admin Excel' : 'مسؤول إكسل'}
-    >
-      {children}
-    </DashboardLayout>
+    <AuthGuard requiredRole="admin" lang={lang}>
+      <DashboardLayout
+        navItems={navItems}
+        lang={lang}
+        title={lang === 'fr' ? 'Admin Account' : 'مسؤول'}
+      >
+        {children}
+      </DashboardLayout>
+    </AuthGuard>
   );
 }

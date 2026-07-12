@@ -11,9 +11,11 @@ import { Loader2 } from 'lucide-react';
 export function AuthForm({
   lang,
   initialMode = 'login',
+  userType = 'student',
 }: {
   lang: Lang;
   initialMode?: 'login' | 'signup';
+  userType?: 'student' | 'institution_admin' | 'admin' | 'teacher';
 }) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
@@ -43,6 +45,7 @@ export function AuthForm({
             data: {
               full_name: name,
               phone: phone,
+              user_type: userType,
             },
             emailRedirectTo: `${window.location.origin}/${lang}/auth/callback`,
           },
@@ -57,7 +60,7 @@ export function AuthForm({
         );
         setMessageType('success');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -69,8 +72,18 @@ export function AuthForm({
         );
         setMessageType('success');
 
-        // Direct to student area by default, Admin check on layout will take care of Admins navigating elsewhere
-        router.push(`/${lang}/student`);
+        // Direct to the specific dashboard area based on user type
+        const loggedInUserType =
+          data.user?.user_metadata?.user_type || userType;
+        if (loggedInUserType === 'institution_admin') {
+          router.push(`/${lang}/institution`);
+        } else if (loggedInUserType === 'teacher') {
+          router.push(`/${lang}/teacher`);
+        } else if (loggedInUserType === 'admin') {
+          router.push(`/${lang}/admin`);
+        } else {
+          router.push(`/${lang}/student`);
+        }
       }
     } catch (err) {
       setMessage(

@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { type Lang } from '@/lib/i18n';
 import Link from 'next/link';
@@ -12,25 +11,6 @@ export default async function AdminDashboard({
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
   const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    redirect(`/${lang}/login`);
-  }
-
-  const { data: userData, error: userErrorDb } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (userErrorDb || userData?.role !== 'admin') {
-    redirect(`/${lang}/student`);
-  }
 
   const [majorsRes, branchesRes, inquiriesRes] = await Promise.all([
     supabase.from('majors').select('*', { count: 'exact', head: true }),
@@ -47,14 +27,14 @@ export default async function AdminDashboard({
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-8">
+      <div className="space-y-6">
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-          {lang === 'fr' ? "Vue d'ensemble" : 'نظرة عامة'}
+          {lang === 'fr' ? 'Tableau de bord Admin' : 'لوحة تحكم المسؤول'}
         </h1>
-        <p className="text-slate-500 mt-2">
+        <p className="text-slate-500 dark:text-slate-400 text-lg">
           {lang === 'fr'
-            ? "Bienvenue sur votre panneau d'administration."
-            : 'مرحبًا بك في لوحة الإدارة الخاصة بك.'}
+            ? "Bienvenue dans l'espace d'administration global."
+            : 'مرحبًا بك في مساحة الإدارة العامة.'}
         </p>
       </div>
 

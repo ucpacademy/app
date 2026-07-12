@@ -8,6 +8,7 @@ import {
   GitBranch,
   GraduationCap,
 } from 'lucide-react';
+import { AuthGuard } from '../auth/AuthGuard';
 
 export function StudentDashboardLayout({
   children,
@@ -52,12 +53,14 @@ export function StudentDashboardLayout({
   ];
 
   return (
-    <DashboardLayout
-      navItems={navItems}
-      lang={lang}
-      title={lang === 'fr' ? 'Espace Étudiant' : 'مساحة الطالب'}
-    >
-      {children}
-    </DashboardLayout>
+    <AuthGuard requiredRole="student" lang={lang}>
+      <DashboardLayout
+        navItems={navItems}
+        lang={lang}
+        title={lang === 'fr' ? 'Espace Étudiant' : 'مساحة الطالب'}
+      >
+        {children}
+      </DashboardLayout>
+    </AuthGuard>
   );
 }

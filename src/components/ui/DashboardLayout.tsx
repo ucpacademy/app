@@ -27,7 +27,7 @@ export function DashboardLayout({
   const [isMobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
+  const [supabase] = useState(() => createBrowserSupabaseClient());
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -41,7 +41,7 @@ export function DashboardLayout({
   };
 
   return (
-    <div className="flex flex-1 w-full bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans relative">
+    <div className="fixed inset-0 z-40 flex bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
       {/* Mobile Backdrop */}
       {isMobileOpen && (
         <div

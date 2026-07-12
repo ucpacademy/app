@@ -113,6 +113,22 @@ There are two dashboard sections behind language prefixes:
 - `/fr/student/majors` or `/ar/student/majors`
   - Student major favorites page.
 
+### Institution dashboard
+- `/fr/institution` or `/ar/institution`
+  - Institution dashboard home.
+- `/fr/institution/programs` or `/ar/institution/programs`
+  - Manage institution programs.
+- `/fr/institution/invitations` or `/ar/institution/invitations`
+  - Manage teacher invitations.
+
+### Teacher dashboard
+- `/fr/teacher` or `/ar/teacher`
+  - Teacher dashboard home.
+- `/fr/teacher/programs` or `/ar/teacher/programs`
+  - View assigned or created programs.
+- `/fr/teacher/programs/new` or `/ar/teacher/programs/new`
+  - Create a new program.
+
 ---
 
 ## Shared UI and behavior
@@ -126,6 +142,10 @@ There are two dashboard sections behind language prefixes:
   - Admin sidebar and top header.
 - `src/components/dashboard/StudentDashboardLayout.tsx`
   - Student sidebar and header.
+- `src/components/dashboard/InstitutionDashboardLayout.tsx`
+  - Institution sidebar and header.
+- `src/components/dashboard/TeacherDashboardLayout.tsx`
+  - Teacher sidebar and header.
 - `src/components/ui/DashboardLayout.tsx`
   - Shared dashboard frame, logout, sidebar and main content container.
 
@@ -165,6 +185,14 @@ There are two dashboard sections behind language prefixes:
 - Bookmarks page fetches favorites for the signed-in user.
 - Pages appear to be placeholders for a student experience flow.
 
+### Institution dashboard
+- Wrapped by `InstitutionDashboardLayout`.
+- Allows institution admins to manage their specific programs and invite teachers.
+
+### Teacher dashboard
+- Wrapped by `TeacherDashboardLayout`.
+- Allows teachers to view their programs and create new ones.
+
 ---
 
 ## Important file locations
@@ -185,6 +213,8 @@ There are two dashboard sections behind language prefixes:
 - `src/app/[lang]/(dashboard)/admin/page.tsx` — admin root
 - `src/app/[lang]/(dashboard)/admin/dashboard/page.tsx` — admin dashboard
 - `src/app/[lang]/(dashboard)/student/page.tsx` — student dashboard
+- `src/app/[lang]/(dashboard)/institution/page.tsx` — institution dashboard
+- `src/app/[lang]/(dashboard)/teacher/page.tsx` — teacher dashboard
 
 ---
 
@@ -197,6 +227,8 @@ There are two dashboard sections behind language prefixes:
 - Signup: `/fr/signup`, `/ar/signup`
 - Admin home: `/fr/admin`, `/ar/admin`
 - Student home: `/fr/student`, `/ar/student`
+- Institution home: `/fr/institution`, `/ar/institution`
+- Teacher home: `/fr/teacher`, `/ar/teacher`
 
 ---
 
@@ -212,7 +244,8 @@ There are two dashboard sections behind language prefixes:
 - Search for `href={`${lang}/...`}` in pages to trace navigation behavior.
 - Look at `src/components/ui/DashboardLayout.tsx` for how dashboard sidebars and logout work.
 - The public navbar is in `src/components/ui/Navbar.tsx` and hides itself on admin/student routes.
-- Language handling is centralized in `src/app/[lang]/layout.tsx` and `src/utils/dictionary.ts`.
+- Language handling and types are centralized in `src/lib/i18n.ts` and `src/lib/dictionary.ts`.
+- Supabase clients (browser and server) are cleanly centralized in `src/lib/supabase/`.
 
 ---
 

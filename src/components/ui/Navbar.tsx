@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap, Menu, X } from 'lucide-react';
+import {
+  GraduationCap,
+  Menu,
+  X,
+  ChevronDown,
+  UserCircle,
+  LogOut,
+} from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import type { Dictionary } from '@/utils/dictionary';
+import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 export function Navbar({
   dictionary,
@@ -16,9 +24,35 @@ export function Navbar({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [supabase] = useState(() => createBrowserSupabaseClient());
 
-  // Hide Navbar in admin and student dashboard layouts
-  if (pathname?.match(/^\/[a-zA-Z0-9-]+\/(admin|student)(\/.*)?$/)) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      setIsLoadingAuth(false);
+    };
+    checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  // Hide Navbar in all dashboard layouts
+  if (
+    pathname?.match(
+      /^\/[a-zA-Z0-9-]+\/(admin|student|institution|teacher)(\/.*)?$/,
+    )
+  ) {
     return null;
   }
 
@@ -44,10 +78,22 @@ export function Navbar({
     },
     { name: isFr ? 'Admissions' : 'القبول', href: `#` },
     { name: isFr ? 'Campus' : 'الحرم الجامعي', href: `#` },
+  ];
+
+  const dashboardLinks = [
     {
       name: isFr ? 'Espace Étudiant' : 'مساحة الطالب',
       href: `${prefix}/student`,
     },
+    {
+      name: isFr ? 'Espace Professeur' : 'مساحة المعلم',
+      href: `${prefix}/teacher`,
+    },
+    {
+      name: isFr ? 'Espace Institution' : 'مساحة المؤسسة',
+      href: `${prefix}/institution`,
+    },
+    { name: isFr ? 'Administration' : 'الإدارة', href: `${prefix}/admin` },
   ];
 
   return (
@@ -88,18 +134,65 @@ export function Navbar({
         {/* Auth Actions */}
         <div className="flex items-center gap-3">
           <ThemeSwitcher />
-          <Link
-            href={`${prefix}/login` as any}
-            className="hidden sm:inline-flex text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-full px-4 py-2"
-          >
-            {dict.login}
-          </Link>
-          <Link
-            href={`${prefix}/signup` as any}
-            className="inline-flex h-10 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
-          >
-            {dict.signup}
-          </Link>
+
+          {isLoadingAuth ? (
+            <div className="w-20 h-8 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-full hidden sm:block" />
+          ) : user ? (
+            <div className="relative group hidden sm:block">
+              <button className="flex items-center gap-2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <UserCircle className="w-6 h-6" />
+                </div>
+                <ChevronDown className="w-4 h-4 text-slate-500 mr-1 transition-transform group-hover:rotate-180" />
+              </button>
+
+              <div className="absolute top-full right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-2 group-hover:translate-y-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl py-2">
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 mb-2">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {user.email}
+                  </p>
+                </div>
+                <div className="px-2 pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
+                  <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    {isFr ? 'Mes Espaces' : 'مساحاتي'}
+                  </p>
+                  {dashboardLinks.map((link) => (
+                    <Link
+                      key={link.name}
+                      href={link.href as any}
+                      className="block px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                </div>
+                <div className="px-2">
+                  <button
+                    onClick={() => supabase.auth.signOut()}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {dict.logout || (isFr ? 'Se déconnecter' : 'تسجيل الخروج')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Link
+                href={`${prefix}/login` as any}
+                className="hidden sm:inline-flex text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-full px-4 py-2"
+              >
+                {dict.login}
+              </Link>
+              <Link
+                href={`${prefix}/signup` as any}
+                className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
+              >
+                {dict.signup}
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Toggle */}
@@ -132,22 +225,64 @@ export function Navbar({
               </Link>
             ))}
           </nav>
-          <div className="flex flex-col space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <Link
-              href={`${prefix}/login` as any}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-center text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 rounded-xl transition-colors bg-slate-50 dark:bg-slate-900"
-            >
-              {dict.login}
-            </Link>
-            <Link
-              href={`${prefix}/signup` as any}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-center flex h-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-base font-semibold text-white shadow-sm transition-all"
-            >
-              {dict.signup}
-            </Link>
-          </div>
+
+          {/* Mobile Dynamic Auth Experience */}
+          {!isLoadingAuth && user ? (
+            <>
+              <div className="pt-4 pb-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="px-4 mb-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <UserCircle className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {user.email}
+                  </p>
+                </div>
+                <p className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                  {isFr ? 'Mes Espaces' : 'مساحاتي'}
+                </p>
+                {dashboardLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href as any}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+              </div>
+              <div className="flex flex-col space-y-3 pt-2 pb-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => {
+                    supabase.auth.signOut();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 text-base font-medium text-red-600 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  {dict.logout || (isFr ? 'Se déconnecter' : 'تسجيل الخروج')}
+                </button>
+              </div>
+            </>
+          ) : !isLoadingAuth && !user ? (
+            <div className="flex flex-col space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <Link
+                href={`${prefix}/login` as any}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-center text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 rounded-xl transition-colors bg-slate-50 dark:bg-slate-900"
+              >
+                {dict.login}
+              </Link>
+              <Link
+                href={`${prefix}/signup` as any}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-center flex h-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-base font-semibold text-white shadow-sm transition-all"
+              >
+                {dict.signup}
+              </Link>
+            </div>
+          ) : null}
         </div>
       )}
     </header>
