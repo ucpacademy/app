@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { type Lang } from '@/lib/i18n';
+import { getAuthRoute, getPostLoginRoute } from '@/lib/domains/auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -72,18 +73,9 @@ export function AuthForm({
         );
         setMessageType('success');
 
-        // Direct to the specific dashboard area based on user type
         const loggedInUserType =
           data.user?.user_metadata?.user_type || userType;
-        if (loggedInUserType === 'institution_admin') {
-          router.push(`/${lang}/institution`);
-        } else if (loggedInUserType === 'teacher') {
-          router.push(`/${lang}/teacher`);
-        } else if (loggedInUserType === 'admin') {
-          router.push(`/${lang}/admin`);
-        } else {
-          router.push(`/${lang}/student`);
-        }
+        router.push(getPostLoginRoute(lang, loggedInUserType));
       }
     } catch (err) {
       setMessage(
@@ -99,7 +91,7 @@ export function AuthForm({
     const nextMode = mode === 'login' ? 'signup' : 'login';
     setMode(nextMode);
     setMessage('');
-    router.push(`/${lang}/${nextMode}`);
+    router.push(getAuthRoute(lang, nextMode));
   };
 
   return (

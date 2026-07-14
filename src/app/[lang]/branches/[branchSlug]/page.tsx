@@ -40,7 +40,7 @@ export default async function BranchPage({
           <>
             <Image
               src={branch.featured_image}
-              alt={translation?.title}
+              alt={translation?.title ?? 'Branch image'}
               fill
               className="absolute inset-0 object-cover opacity-40"
             />

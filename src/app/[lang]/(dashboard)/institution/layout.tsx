@@ -6,7 +6,7 @@ export default async function InstitutionLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ lang: Lang }>;
+  params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
   return (

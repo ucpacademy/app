@@ -9,8 +9,16 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  User,
+  Users,
 } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import {
+  buildLocalizedPath,
+  getDashboardRoute,
+  getPublicRoute,
+  normalizeLocale,
+} from '@/lib/routes';
 
 export interface NavItem {
   name: string;
@@ -36,6 +44,7 @@ export function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [supabase] = useState(() => createBrowserSupabaseClient());
+  const currentLang = normalizeLocale(lang);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -53,7 +62,83 @@ export function DashboardLayout({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push(`/${lang}/login`);
+    router.push(getPublicRoute(currentLang, 'login'));
+  };
+
+  // Account switcher: detect available roles from user metadata and allow navigation
+  const [availableAccounts, setAvailableAccounts] = useState<string[]>([]);
+  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
+  const [isAccountOpen, setAccountOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!mounted || !user) return;
+
+        const meta = (user.user_metadata as any) || {};
+
+        // Support multiple possible shapes for roles in metadata
+        let roles: string[] = [];
+        if (Array.isArray(meta.roles)) roles = meta.roles;
+        else if (typeof meta.role === 'string') roles = [meta.role];
+        else if (meta.account && typeof meta.account === 'string')
+          roles = [meta.account];
+
+        // Normalize and filter known dashboard roles
+        const known = ['student', 'teacher', 'institution', 'admin'];
+        const filtered = Array.from(
+          new Set(roles.map((r) => String(r).toLowerCase())),
+        ).filter((r) => known.includes(r));
+
+        if (filtered.length > 0) {
+          setAvailableAccounts(filtered);
+          setCurrentAccount((prev) => prev || filtered[0]);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
+  const accountToPath = (account: string) => {
+    switch (account) {
+      case 'student':
+        return getDashboardRoute(currentLang, 'student');
+      case 'teacher':
+        return getDashboardRoute(currentLang, 'teacher');
+      case 'institution':
+        return getDashboardRoute(currentLang, 'institution');
+      case 'admin':
+        return getDashboardRoute(currentLang, 'admin');
+      default:
+        return buildLocalizedPath(currentLang, '/');
+    }
+  };
+
+  const handleSwitchAccount = (acc: string) => {
+    setCurrentAccount(acc);
+    setAccountOpen(false);
+    router.push(accountToPath(acc));
+  };
+
+  const accountDisplayName = (acc: string) => {
+    const map: Record<string, { fr: string; ar: string }> = {
+      student: { fr: 'Étudiant', ar: 'طالب' },
+      teacher: { fr: 'Professeur', ar: 'معلم' },
+      institution: { fr: 'Institution', ar: 'مؤسسة' },
+      admin: { fr: 'Admin', ar: 'مسؤول' },
+    };
+    const key = map[acc];
+    if (!key) return acc;
+    return lang === 'fr' ? key.fr : key.ar;
   };
 
   return (
@@ -208,8 +293,59 @@ export function DashboardLayout({
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            {/* Account switcher */}
+            {availableAccounts.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setAccountOpen((s) => !s)}
+                  title={currentAccount || undefined}
+                  className="flex items-center gap-3 px-3 py-2 rounded-md bg-white dark:bg-slate-900 text-sm text-slate-700 dark:text-slate-200 hover:shadow-md transition-all"
+                >
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-700/30 flex items-center justify-center text-indigo-600 dark:text-indigo-200">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="hidden sm:flex flex-col leading-tight">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {lang === 'fr' ? 'Compte' : 'الحساب'}
+                    </span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">
+                      {currentAccount
+                        ? accountDisplayName(currentAccount)
+                        : lang === 'fr'
+                          ? 'Compte'
+                          : 'الحساب'}
+                    </span>
+                  </div>
+                </button>
+
+                {isAccountOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xl z-20">
+                    <div className="py-2">
+                      {availableAccounts.map((acc) => (
+                        <button
+                          key={acc}
+                          onClick={() => handleSwitchAccount(acc)}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 ${currentAccount === acc ? 'font-medium text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}
+                        >
+                          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200">
+                            <Users className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="truncate">
+                              {accountDisplayName(acc)}
+                            </div>
+                            <div className="text-xs text-slate-400">{acc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Link
-              href={`/${lang}` as any}
+              href={buildLocalizedPath(currentLang, '/') as any}
               className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors hidden sm:block"
             >
               {lang === 'fr' ? 'Retourner au site' : 'العودة للموقع'}

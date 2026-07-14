@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { type Lang } from '@/lib/i18n';
+import { getDashboardRoute, getPublicRoute } from '@/lib/routes';
 
 export function Shell({
   children,
@@ -35,7 +36,7 @@ export function Shell({
             <ThemeSwitcher />
             <LanguageSwitcher currentLang={lang} />
             <Link
-              href={`/${lang}/login`}
+              href={getPublicRoute(lang, 'login')}
               className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold text-sm transition-colors shadow-sm hover:shadow-md"
               title={lang === 'fr' ? 'Se connecter' : 'تسجيل الدخول'}
             >
@@ -82,7 +83,7 @@ export function Shell({
               <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
                 <li>
                   <Link
-                    href={`/${lang}/majors`}
+                    href={getPublicRoute(lang, 'majors')}
                     className="hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                   >
                     {lang === 'fr' ? 'Filières' : 'التخصصات'}
@@ -90,7 +91,7 @@ export function Shell({
                 </li>
                 <li>
                   <Link
-                    href={`/${lang}/student`}
+                    href={getDashboardRoute(lang, 'student')}
                     className="hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                   >
                     {lang === 'fr' ? 'Espace étudiant' : 'مساحة الطالب'}

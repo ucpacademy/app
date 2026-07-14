@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Loader2, ShieldAlert, Clock, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
 
 export function AuthGuard({
   children,
@@ -30,6 +31,8 @@ export function AuthGuard({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -51,13 +54,15 @@ export function AuthGuard({
         if (isMounted) setIsAuthenticated(true);
 
         // Fetch profile to get role array
-        const { data: profile } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
-          .select('roles')
+          .select('*')
           .eq('id', user.id)
           .single();
 
-        const roles = profile?.roles || [];
+        setProfile(profileData || null);
+
+        const roles = (profileData?.roles as string[]) || [];
 
         // Admins can access everything, otherwise check for specific role
         if (roles.includes(requiredRole) || roles.includes('admin')) {
@@ -91,7 +96,7 @@ export function AuthGuard({
   }, [supabase, requiredRole, refreshTrigger]);
 
   const handleRequestAccess = async () => {
-    setIsLoading(true);
+    setIsRequesting(true);
     try {
       const {
         data: { user },
@@ -107,7 +112,7 @@ export function AuthGuard({
     } catch (error) {
       console.error('Failed to request access:', error);
     } finally {
-      setIsLoading(false);
+      setIsRequesting(false);
     }
   };
 
@@ -127,10 +132,11 @@ export function AuthGuard({
       // Success! Trigger a re-check of auth and roles
       setRefreshTrigger((prev) => prev + 1);
     } catch (error: any) {
+      const msg = (error && error.message) || String(error);
       setLoginError(
         lang === 'fr'
-          ? 'Échec de la connexion. Veuillez vérifier vos identifiants.'
-          : 'فشل تسجيل الدخول. يرجى التحقق من بيانات الاعتماد الخاصة بك.',
+          ? `Échec de la connexion. ${msg}`
+          : `فشل تسجيل الدخول. ${msg}`,
       );
     } finally {
       setIsLoggingIn(false);
@@ -140,7 +146,12 @@ export function AuthGuard({
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <div className="rounded-lg bg-white dark:bg-slate-900 p-8 shadow-lg flex items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          <div className="text-slate-700 dark:text-slate-300">
+            {lang === 'fr' ? 'Chargement…' : 'جاري التحميل…'}
+          </div>
+        </div>
       </div>
     );
   }
@@ -196,28 +207,34 @@ export function AuthGuard({
                 placeholder="••••••••"
               />
             </div>
-            <Button type="submit" disabled={isLoggingIn} className="w-full">
-              {isLoggingIn ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : null}
-              {isLoggingIn
-                ? lang === 'fr'
-                  ? 'Connexion...'
-                  : 'جاري تسجيل الدخول...'
-                : lang === 'fr'
-                  ? 'Se connecter'
-                  : 'تسجيل الدخول'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={isLoggingIn} className="flex-1">
+                {isLoggingIn ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {isLoggingIn
+                  ? lang === 'fr'
+                    ? 'Connexion...'
+                    : 'جاري تسجيل الدخول...'
+                  : lang === 'fr'
+                    ? 'Se connecter'
+                    : 'تسجيل الدخول'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/${lang}/signup`} className="whitespace-nowrap">
+                  {lang === 'fr' ? "S'inscrire" : 'إنشاء حساب'}
+                </Link>
+              </Button>
+            </div>
           </form>
 
           <div className="text-center text-sm text-slate-500">
             {lang === 'fr' ? 'Pas encore de compte ?' : 'ليس لديك حساب؟'}{' '}
-            <Link
-              href={`/${lang}/signup`}
-              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-            >
-              {lang === 'fr' ? "S'inscrire" : 'إنشاء حساب'}
-            </Link>
+            <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+              {lang === 'fr'
+                ? 'Créez un compte pour accéder'
+                : 'أنشئ حساب للوصول'}
+            </span>
           </div>
         </Card>
       </div>
@@ -228,12 +245,42 @@ export function AuthGuard({
   if (!hasRole) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950">
-        <Card className="max-w-md w-full p-8 text-center space-y-6">
+        <Card className="max-w-lg w-full p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-700/30 flex items-center justify-center text-indigo-600 dark:text-indigo-200">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-lg font-semibold text-slate-900 dark:text-white">
+                {profile?.full_name ||
+                  profile?.display_name ||
+                  profile?.email ||
+                  (lang === 'fr' ? 'Utilisateur' : 'مستخدم')}
+              </div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                {profile?.email || ''}
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2">
+              {(profile?.roles || []).map((r: string) => (
+                <div
+                  key={r}
+                  className="text-xs px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                >
+                  {r}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {requestStatus === 'pending' ? (
-            <>
-              <Clock className="w-16 h-16 mx-auto text-amber-500" />
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="text-center space-y-3">
+              <Clock className="w-12 h-12 mx-auto text-amber-500" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {lang === 'fr' ? 'Demande en cours' : 'الطلب قيد المعالجة'}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">
@@ -242,17 +289,19 @@ export function AuthGuard({
                     : 'طلب الوصول الخاص بك قيد المعالجة حاليًا بواسطة مسؤول.'}
                 </p>
               </div>
-              <Button variant="outline" asChild className="w-full">
-                <Link href={`/${lang}/student`}>
-                  {lang === 'fr' ? 'Retour à mon espace' : 'العودة لمساحتي'}
-                </Link>
-              </Button>
-            </>
+              <div className="flex gap-2 mt-4">
+                <Button variant="outline" asChild className="flex-1">
+                  <Link href={`/${lang}`}>
+                    {lang === 'fr' ? 'Retour au site' : 'العودة للموقع'}
+                  </Link>
+                </Button>
+              </div>
+            </div>
           ) : requestStatus === 'rejected' ? (
-            <>
-              <ShieldAlert className="w-16 h-16 mx-auto text-red-500" />
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="text-center space-y-3">
+              <ShieldAlert className="w-12 h-12 mx-auto text-red-500" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {lang === 'fr' ? 'Demande refusée' : 'تم رفض الطلب'}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">
@@ -261,17 +310,32 @@ export function AuthGuard({
                     : 'تم رفض طلب الوصول الخاص بك. يرجى الاتصال بالدعم.'}
                 </p>
               </div>
-              <Button onClick={handleRequestAccess} className="w-full">
-                {lang === 'fr'
-                  ? 'Faire une nouvelle demande'
-                  : 'تقديم طلب جديد'}
-              </Button>
-            </>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={handleRequestAccess}
+                  className="flex-1"
+                  disabled={isRequesting}
+                >
+                  {isRequesting
+                    ? lang === 'fr'
+                      ? 'Envoi...'
+                      : 'جارٍ الإرسال...'
+                    : lang === 'fr'
+                      ? 'Faire une nouvelle demande'
+                      : 'تقديم طلب جديد'}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`mailto:support@example.com`}>
+                    {lang === 'fr' ? 'Contacter le support' : 'اتصل بالدعم'}
+                  </Link>
+                </Button>
+              </div>
+            </div>
           ) : (
-            <>
-              <ShieldAlert className="w-16 h-16 mx-auto text-indigo-600" />
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="text-center space-y-3">
+              <ShieldAlert className="w-12 h-12 mx-auto text-indigo-600" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {lang === 'fr' ? 'Accès restreint' : 'وصول مقيد'}
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">
@@ -280,10 +344,27 @@ export function AuthGuard({
                     : `ليس لديك أذونات للوصول إلى هذه المساحة. هل ترغب في التقديم؟`}
                 </p>
               </div>
-              <Button onClick={handleRequestAccess} className="w-full">
-                {lang === 'fr' ? "Demander l'accès" : 'طلب الوصول'}
-              </Button>
-            </>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={handleRequestAccess}
+                  className="flex-1"
+                  disabled={isRequesting}
+                >
+                  {isRequesting
+                    ? lang === 'fr'
+                      ? 'Envoi...'
+                      : 'جارٍ الإرسال...'
+                    : lang === 'fr'
+                      ? "Demander l'accès"
+                      : 'طلب الوصول'}
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href={`/${lang}`}>
+                    {lang === 'fr' ? 'Retour au site' : 'العودة للموقع'}
+                  </Link>
+                </Button>
+              </div>
+            </div>
           )}
         </Card>
       </div>

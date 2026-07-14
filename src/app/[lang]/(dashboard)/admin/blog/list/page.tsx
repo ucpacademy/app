@@ -40,7 +40,11 @@ export default async function AdminBlogPage({
     query = query.eq('status', status);
   }
 
-  const { data: posts } = (await query) as any;
+  const { data: posts, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   const translations = {
     title: lang === 'fr' ? 'Blog' : 'المدونة',
@@ -126,11 +130,16 @@ export default async function AdminBlogPage({
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                      {post.author?.full_name && (
-                        <span>
-                          {translations.author}: {post.author.full_name}
-                        </span>
-                      )}
+                      {(() => {
+                        const author = Array.isArray(post.author)
+                          ? post.author[0]
+                          : post.author;
+                        return author?.full_name ? (
+                          <span>
+                            {translations.author}: {author.full_name}
+                          </span>
+                        ) : null;
+                      })()}
                       {post.published_at && (
                         <span>
                           {new Date(post.published_at).toLocaleDateString(

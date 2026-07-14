@@ -6,7 +6,7 @@ export default async function StudentLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ lang: Lang }>;
+  params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
   return (

@@ -12,8 +12,17 @@ import {
   LogOut,
 } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import type { Dictionary } from '@/utils/dictionary';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import { type Lang } from '@/lib/i18n';
+import {
+  buildLocalizedPath,
+  getDashboardRoute,
+  getPublicRoute,
+} from '@/lib/routes';
+import { getAudienceNavLinks, getCatalogNavLinks } from '@/lib/domains/catalog';
+import { getDashboardQuickLinks } from '@/lib/domains/dashboard';
 
 export function Navbar({
   dictionary,
@@ -27,6 +36,7 @@ export function Navbar({
   const [user, setUser] = useState<any>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [supabase] = useState(() => createBrowserSupabaseClient());
+  const [openMegaMenu, setOpenMegaMenu] = useState<'discover' | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -47,6 +57,20 @@ export function Navbar({
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        openMegaMenu &&
+        !(event.target as HTMLElement).closest('[data-nav-menu]')
+      ) {
+        setOpenMegaMenu(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMegaMenu]);
+
   // Hide Navbar in all dashboard layouts
   if (
     pathname?.match(
@@ -56,45 +80,22 @@ export function Navbar({
     return null;
   }
 
-  const prefix = currentLang ? `/${currentLang}` : '';
+  const activeLang = (currentLang === 'ar' ? 'ar' : 'fr') as Lang;
 
-  // Fallback to English strings if dictionary is missing during migration
+  const isFr = activeLang === 'fr';
+
+  // Fallback to localized strings when dictionary is missing
   const dict = dictionary || {
-    home: 'Home',
-    dashboard: 'Dashboard',
-    logout: 'Logout',
-    explore_majors: 'Explore Majors',
-    login: 'Log in',
-    signup: 'Sign Up',
+    home: isFr ? 'Accueil' : 'الرئيسية',
+    dashboard: isFr ? 'Tableau de bord' : 'لوحة التحكم',
+    logout: isFr ? 'Se déconnecter' : 'تسجيل الخروج',
+    explore_majors: isFr ? 'Explorer les filières' : 'استكشف التخصصات',
+    login: isFr ? 'Connexion' : 'تسجيل الدخول',
+    signup: isFr ? 'Créer un compte' : 'إنشاء حساب',
   };
-
-  const isFr = currentLang === 'fr' || !currentLang;
-
-  const navLinks = [
-    { name: isFr ? 'Filières' : 'التخصصات', href: `${prefix}/majors` },
-    {
-      name: isFr ? 'Institutions' : 'المؤسسات',
-      href: `${prefix}/institutions`,
-    },
-    { name: isFr ? 'Admissions' : 'القبول', href: `#` },
-    { name: isFr ? 'Campus' : 'الحرم الجامعي', href: `#` },
-  ];
-
-  const dashboardLinks = [
-    {
-      name: isFr ? 'Espace Étudiant' : 'مساحة الطالب',
-      href: `${prefix}/student`,
-    },
-    {
-      name: isFr ? 'Espace Professeur' : 'مساحة المعلم',
-      href: `${prefix}/teacher`,
-    },
-    {
-      name: isFr ? 'Espace Institution' : 'مساحة المؤسسة',
-      href: `${prefix}/institution`,
-    },
-    { name: isFr ? 'Administration' : 'الإدارة', href: `${prefix}/admin` },
-  ];
+  const navLinks = getCatalogNavLinks(activeLang);
+  const audienceLinks = getAudienceNavLinks(activeLang);
+  const dashboardLinks = getDashboardQuickLinks(activeLang);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-950/60 transition-colors duration-300 border-b border-slate-200 dark:border-slate-800">
@@ -102,7 +103,7 @@ export function Navbar({
         {/* Brand / Logo */}
         <div className="flex items-center">
           <Link
-            href={(prefix || '/') as any}
+            href={buildLocalizedPath(activeLang, '/') as any}
             className="group flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 transition-opacity hover:opacity-80"
             aria-label="Excel Home"
           >
@@ -116,23 +117,78 @@ export function Navbar({
         </div>
 
         {/* Desktop Navigation */}
-        <nav
-          aria-label="Main"
-          className="hidden md:flex items-center space-x-1 lg:space-x-2"
+        <div
+          className="hidden md:flex items-center gap-2 lg:gap-3"
+          data-nav-menu
         >
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.href as any}
-              className="text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() =>
+                setOpenMegaMenu((prev) =>
+                  prev === 'discover' ? null : 'discover',
+                )
+              }
+              className="rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-indigo-500 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
             >
-              {link.name}
-            </Link>
-          ))}
-        </nav>
+              {isFr ? 'Découvrir' : 'استكشف'}
+            </button>
+
+            {openMegaMenu === 'discover' && (
+              <div className="absolute left-0 top-full mt-3 w-[560px] rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-950">
+                <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                      {isFr ? 'Navigation principale' : 'التنقل الرئيسي'}
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {navLinks.map((link) => (
+                        <Link
+                          key={link.name}
+                          href={link.href as any}
+                          onClick={() => setOpenMegaMenu(null)}
+                          className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          <span>{link.name}</span>
+                          <span className="text-slate-400">→</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                      {isFr ? 'Par public' : 'حسب الجمهور'}
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      {audienceLinks.map((link) => (
+                        <Link
+                          key={link.name}
+                          href={link.href as any}
+                          onClick={() => setOpenMegaMenu(null)}
+                          className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          {link.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Link
+            href={getPublicRoute(activeLang, 'programs') as any}
+            className="rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            {isFr ? 'Programmes' : 'البرامج'}
+          </Link>
+        </div>
 
         {/* Auth Actions */}
         <div className="flex items-center gap-3">
+          <LanguageSwitcher currentLang={activeLang} />
           <ThemeSwitcher />
 
           {isLoadingAuth ? (
@@ -180,13 +236,13 @@ export function Navbar({
           ) : (
             <>
               <Link
-                href={`${prefix}/login` as any}
+                href={getPublicRoute(activeLang, 'login') as any}
                 className="hidden sm:inline-flex text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded-full px-4 py-2"
               >
                 {dict.login}
               </Link>
               <Link
-                href={`${prefix}/signup` as any}
+                href={getPublicRoute(activeLang, 'signup') as any}
                 className="hidden sm:inline-flex h-10 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-700 px-6 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600"
               >
                 {dict.signup}
@@ -213,18 +269,40 @@ export function Navbar({
       {/* Mobile Navigation Dropdown */}
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-4 space-y-4 shadow-xl">
+          <div className="flex items-center justify-start">
+            <LanguageSwitcher currentLang={activeLang} />
+          </div>
+
           <nav className="flex flex-col space-y-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href as any}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                className="rounded-xl px-4 py-3 text-base font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-400"
               >
                 {link.name}
               </Link>
             ))}
           </nav>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+            <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+              {isFr ? 'Par public' : 'حسب الجمهور'}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {audienceLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href as any}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-indigo-900/20"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+          </div>
 
           {/* Mobile Dynamic Auth Experience */}
           {!isLoadingAuth && user ? (
@@ -268,14 +346,14 @@ export function Navbar({
           ) : !isLoadingAuth && !user ? (
             <div className="flex flex-col space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
               <Link
-                href={`${prefix}/login` as any}
+                href={getPublicRoute(activeLang, 'login') as any}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-center text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-3 rounded-xl transition-colors bg-slate-50 dark:bg-slate-900"
               >
                 {dict.login}
               </Link>
               <Link
-                href={`${prefix}/signup` as any}
+                href={getPublicRoute(activeLang, 'signup') as any}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-center flex h-12 items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-base font-semibold text-white shadow-sm transition-all"
               >

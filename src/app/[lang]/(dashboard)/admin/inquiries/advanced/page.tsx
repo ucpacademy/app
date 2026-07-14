@@ -68,7 +68,24 @@ export default async function AdminInquiriesPage({
     query = query.lte('created_at', new Date(dateTo).toISOString());
   }
 
-  const { data: inquiries } = await query;
+  const { data: inquiries, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const getBranchTitle = (
+    branch:
+      | { title_fr?: string | null; title_ar?: string | null }
+      | Array<{ title_fr?: string | null; title_ar?: string | null }>
+      | null
+      | undefined,
+  ) => {
+    const normalizedBranch = Array.isArray(branch) ? branch[0] : branch;
+    return lang === 'fr'
+      ? (normalizedBranch?.title_fr ?? '')
+      : (normalizedBranch?.title_ar ?? '');
+  };
 
   const translations = {
     title: lang === 'fr' ? 'Demandes' : 'الطلبات',
@@ -248,9 +265,7 @@ export default async function AdminInquiriesPage({
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {lang === 'fr' ? 'Branche' : 'الفرع'}:{' '}
-                      {lang === 'fr'
-                        ? inquiry.branch?.title_fr
-                        : inquiry.branch?.title_ar}
+                      {getBranchTitle(inquiry.branch) || 'N/A'}
                       {' | '}
                       {new Date(inquiry.created_at).toLocaleDateString(
                         lang === 'fr' ? 'fr-FR' : 'ar-SA',

@@ -96,7 +96,7 @@ export function ProgramsList({
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
           {translations.title}
         </h1>
-        <Link href="/admin/programs/new">
+        <Link href={`/${lang}/admin/programs/new`}>
           <Button className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             {translations.add}
@@ -184,7 +184,7 @@ export function ProgramsList({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Link href={`/admin/programs/${program.id}`}>
+                  <Link href={`/${lang}/admin/programs/${program.id}`}>
                     <Button variant="outline" size="sm" className="gap-1">
                       <Edit2 className="w-4 h-4" />
                       {translations.edit}

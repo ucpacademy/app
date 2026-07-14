@@ -1,5 +1,11 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
+type RelationValue<T> = T | T[] | null | undefined;
+
+function normalizeRelation<T>(value: RelationValue<T>): T | null {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
 export async function getAdminPrograms() {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
@@ -23,7 +29,13 @@ export async function getAdminPrograms() {
     throw new Error(error.message);
   }
 
-  return data || [];
+  return (
+    (data || []).map((program: any) => ({
+      ...program,
+      branch: normalizeRelation(program.branch),
+      institution: normalizeRelation(program.institution),
+    })) || []
+  );
 }
 
 export async function getAdminInstitutions() {

@@ -258,6 +258,28 @@ CREATE TABLE comments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 11b. Program Announcements Table (Community Layer)
+CREATE TABLE program_announcements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(title) > 3),
+  content TEXT NOT NULL,
+  edited_at TIMESTAMPTZ
+);
+
+-- 11c. Program Posts Table (Discussion Forum / Community Layer)
+CREATE TABLE program_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  parent_post_id UUID REFERENCES program_posts(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  edited_at TIMESTAMPTZ
+);
+
 -- ==================== ADMIN & CONTENT MANAGEMENT ====================
 
 -- 12. Blog Posts Table
@@ -382,6 +404,9 @@ CREATE INDEX idx_lesson_progress_user_id ON lesson_progress(user_id);
 CREATE INDEX idx_lesson_progress_lesson_id ON lesson_progress(lesson_id);
 CREATE INDEX idx_role_requests_user_id ON role_requests(user_id);
 CREATE INDEX idx_role_requests_status ON role_requests(status);
+CREATE INDEX idx_program_announcements_program_id ON program_announcements(program_id);
+CREATE INDEX idx_program_posts_program_id ON program_posts(program_id);
+CREATE INDEX idx_program_posts_parent_post_id ON program_posts(parent_post_id);
 
 -- ==================== TRIGGERS & FUNCTIONS ====================
 
@@ -474,6 +499,41 @@ RETURNS TEXT[] AS $$
   SELECT roles FROM public.profiles WHERE id = auth.uid();
 $$ LANGUAGE sql SECURITY DEFINER;
 
+-- Helper function to check if the current user is enrolled in a specific program.
+CREATE OR REPLACE FUNCTION public.is_enrolled(program_id_to_check UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM enrollments
+    WHERE
+      program_id = program_id_to_check AND
+      user_id = auth.uid()
+  );
+$$;
+
+-- Helper function to check if the current user is the owner (instructor or part of institution) of a program.
+CREATE OR REPLACE FUNCTION public.is_program_owner(program_id_to_check UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM programs p
+    LEFT JOIN institution_memberships im ON im.institution_id = p.institution_id
+    WHERE
+      p.id = program_id_to_check AND
+      (
+        p.instructor_id = auth.uid() OR
+        im.user_id = auth.uid()
+      )
+  );
+$$;
+
 -- ==================== ROW LEVEL SECURITY ====================
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -485,6 +545,8 @@ ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lesson_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE institution_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE role_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE program_announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE program_posts ENABLE ROW LEVEL SECURITY;
 
 -- Profiles RLS
 CREATE POLICY "Users can read their own profile"
@@ -546,3 +608,16 @@ CREATE POLICY "Admins can view all requests"
 CREATE POLICY "Admins can update requests"
   ON role_requests FOR UPDATE
   USING ('admin' = ANY(public.get_user_roles()));
+
+-- Program Announcements RLS
+CREATE POLICY "Allow enrolled students to read announcements" ON program_announcements FOR SELECT USING ( public.is_enrolled(program_id) );
+CREATE POLICY "Allow program owners to create announcements" ON program_announcements FOR INSERT WITH CHECK ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow program owners to update announcements" ON program_announcements FOR UPDATE USING ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow program owners to delete announcements" ON program_announcements FOR DELETE USING ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+
+-- Program Posts RLS
+CREATE POLICY "Allow enrolled users to read posts" ON program_posts FOR SELECT USING ( public.is_enrolled(program_id) );
+CREATE POLICY "Allow enrolled users to create posts" ON program_posts FOR INSERT WITH CHECK ( public.is_enrolled(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow authors to update their own posts" ON program_posts FOR UPDATE USING ( author_id = auth.uid() );
+CREATE POLICY "Allow authors to delete their own posts" ON program_posts FOR DELETE USING ( author_id = auth.uid() );
+CREATE POLICY "Allow program owners to moderate posts" ON program_posts FOR DELETE USING ( public.is_program_owner(program_id) );

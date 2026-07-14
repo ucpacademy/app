@@ -9,6 +9,10 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { AuthGuard } from '../auth/AuthGuard';
+import {
+  getStudentDashboardNavItems,
+  getDashboardTitle,
+} from '@/lib/domains/dashboard';
 
 export function StudentDashboardLayout({
   children,
@@ -17,47 +21,14 @@ export function StudentDashboardLayout({
   children: React.ReactNode;
   lang: string;
 }) {
-  const navItems = [
-    {
-      name: lang === 'fr' ? 'Tableau de bord' : 'لوحة القيادة',
-      href: `/${lang}/student`,
-      icon: LayoutDashboard,
-    },
-    {
-      name: lang === 'fr' ? 'Mon Profil (Bientôt)' : 'ملفي الشخصي (قريباً)',
-      href: `/${lang}/student/profile`,
-      icon: User,
-    },
-    {
-      name:
-        lang === 'fr' ? 'Cours Favoris (Bientôt)' : 'الدورات المفضلة (قريباً)',
-      href: `/${lang}/student/courses`,
-      icon: BookOpen,
-    },
-    {
-      name:
-        lang === 'fr'
-          ? 'Branches Favorites (Bientôt)'
-          : 'الفروع المفضلة (قريباً)',
-      href: `/${lang}/student/branches`,
-      icon: GitBranch,
-    },
-    {
-      name:
-        lang === 'fr'
-          ? 'Filières Favorites (Bientôt)'
-          : 'التخصصات المفضلة (قريباً)',
-      href: `/${lang}/student/majors`,
-      icon: GraduationCap,
-    },
-  ];
+  const navItems = getStudentDashboardNavItems(lang as any);
 
   return (
     <AuthGuard requiredRole="student" lang={lang}>
       <DashboardLayout
         navItems={navItems}
         lang={lang}
-        title={lang === 'fr' ? 'Espace Étudiant' : 'مساحة الطالب'}
+        title={getDashboardTitle(lang as any, 'student')}
       >
         {children}
       </DashboardLayout>

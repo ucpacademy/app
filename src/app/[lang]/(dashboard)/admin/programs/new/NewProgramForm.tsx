@@ -96,7 +96,7 @@ export function NewProgramForm({
       return;
     }
 
-    await router.push(`/${lang}/(dashboard)/admin/programs`);
+    await router.push(`/${lang}/admin/programs`);
     router.refresh();
   };
 

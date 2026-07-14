@@ -48,7 +48,15 @@ export default async function AdminReviewsPage({
     query = query.eq('rating', parseInt(rating));
   }
 
-  const { data: reviews } = await query;
+  const { data: reviews, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const getSingleRelation = <T,>(
+    value: T | T[] | null | undefined,
+  ): T | null => (Array.isArray(value) ? (value[0] ?? null) : (value ?? null));
 
   const translations = {
     title: lang === 'fr' ? 'Avis' : 'التقييمات',
@@ -122,61 +130,70 @@ export default async function AdminReviewsPage({
           </Card>
         ) : (
           <div className="space-y-3">
-            {reviews.map((review) => (
-              <Card key={review.id} className="p-4 bg-white dark:bg-slate-900">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`w-4 h-4 ${
-                              i < review.rating
-                                ? 'fill-amber-400 text-amber-400'
-                                : 'text-slate-300 dark:text-slate-600'
-                            }`}
-                          />
-                        ))}
+            {reviews.map((review) => {
+              const reviewUser = getSingleRelation(review.user);
+              const reviewBranch = getSingleRelation(review.branch);
+              const reviewProgram = getSingleRelation(review.program);
+
+              return (
+                <Card
+                  key={review.id}
+                  className="p-4 bg-white dark:bg-slate-900"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < review.rating
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'text-slate-300 dark:text-slate-600'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <h3 className="font-bold text-slate-900 dark:text-white">
+                          {lang === 'fr' ? review.title_fr : review.title_ar}
+                        </h3>
                       </div>
-                      <h3 className="font-bold text-slate-900 dark:text-white">
-                        {lang === 'fr' ? review.title_fr : review.title_ar}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                      {review.user?.full_name} {lang === 'fr' ? 'sur' : 'على'}{' '}
-                      {review.branch
-                        ? lang === 'fr'
-                          ? review.branch.title_fr
-                          : review.branch.title_ar
-                        : review.program
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                        {reviewUser?.full_name} {lang === 'fr' ? 'sur' : 'على'}{' '}
+                        {reviewBranch
                           ? lang === 'fr'
-                            ? review.program.title_fr
-                            : review.program.title_ar
-                          : 'N/A'}
-                    </p>
+                            ? reviewBranch.title_fr
+                            : reviewBranch.title_ar
+                          : reviewProgram
+                            ? lang === 'fr'
+                              ? reviewProgram.title_fr
+                              : reviewProgram.title_ar
+                            : 'N/A'}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
+                        review.status === 'approved'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-500/20'
+                          : review.status === 'pending'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20'
+                            : 'bg-red-100 text-red-700 dark:bg-red-500/20'
+                      }`}
+                    >
+                      {review.status}
+                    </span>
+                    <Link
+                      href={`/${lang}/(dashboard)/admin/reviews/${review.id}`}
+                    >
+                      <Button variant="outline" size="sm">
+                        {lang === 'fr' ? 'Gérer' : 'إدارة'}
+                      </Button>
+                    </Link>
                   </div>
-                  <span
-                    className={`px-2 py-1 text-xs rounded whitespace-nowrap ${
-                      review.status === 'approved'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-500/20'
-                        : review.status === 'pending'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20'
-                          : 'bg-red-100 text-red-700 dark:bg-red-500/20'
-                    }`}
-                  >
-                    {review.status}
-                  </span>
-                  <Link
-                    href={`/${lang}/(dashboard)/admin/reviews/${review.id}`}
-                  >
-                    <Button variant="outline" size="sm">
-                      {lang === 'fr' ? 'Gérer' : 'إدارة'}
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
