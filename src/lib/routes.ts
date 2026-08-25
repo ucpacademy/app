@@ -12,7 +12,10 @@ export type PublicRouteKey =
   | 'forInstitutions'
   | 'platform'
   | 'login'
-  | 'signup';
+  | 'signup'
+  | 'blog'
+  | 'events'
+  | 'faq';
 
 export const publicRoutes: Record<PublicRouteKey, string> = {
   home: '/',
@@ -25,6 +28,9 @@ export const publicRoutes: Record<PublicRouteKey, string> = {
   platform: '/platform',
   login: '/login',
   signup: '/signup',
+  blog: '/blog',
+  events: '/events',
+  faq: '/faq',
 };
 
 export const dashboardRoutes: Record<DashboardRole, string> = {

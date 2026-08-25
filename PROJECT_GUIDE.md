@@ -172,6 +172,8 @@ There are two dashboard sections behind language prefixes:
   - Enrollment page.
 - `/fr/student/majors` or `/ar/student/majors`
   - Student major favorites page.
+- `/fr/student/programs/[programId]/community` or `/ar/student/programs/[programId]/community`
+  - Student access to the program's discussion board and announcements.
 
 ### Institution dashboard
 - `/fr/institution` or `/ar/institution`
@@ -188,6 +190,10 @@ There are two dashboard sections behind language prefixes:
   - View assigned or created programs.
 - `/fr/teacher/programs/new` or `/ar/teacher/programs/new`
   - Create a new program.
+- `/fr/teacher/programs/[programId]/curriculum` or `/ar/teacher/programs/[programId]/curriculum`
+  - Curriculum Builder to manage courses, modules, and lessons.
+- `/fr/teacher/programs/[programId]/community` or `/ar/teacher/programs/[programId]/community`
+  - Manage program discussions and post announcements.
 
 ---
 
@@ -244,6 +250,7 @@ There are two dashboard sections behind language prefixes:
 - Student pages are wrapped by `StudentDashboardLayout`.
 - Bookmarks page fetches favorites for the signed-in user.
 - Pages appear to be placeholders for a student experience flow.
+- **Program Community**: Provides a "Skool-like" interface where students can interact on a two-column discussion board and view instructor announcements in a sticky sidebar.
 
 ### Institution dashboard
 - Wrapped by `InstitutionDashboardLayout`.
@@ -252,6 +259,8 @@ There are two dashboard sections behind language prefixes:
 ### Teacher dashboard
 - Wrapped by `TeacherDashboardLayout`.
 - Allows teachers to view their programs and create new ones.
+- **Curriculum Builder**: An interactive, nested list interface where teachers can add courses, modules, and lessons. They can inline-edit lesson video URLs, titles, and durations.
+- **Community Administration**: Instructors can view student discussions, reply to threads, and post new announcements to the sidebar.
 
 ---
 
@@ -275,6 +284,8 @@ There are two dashboard sections behind language prefixes:
 - `src/app/[lang]/(dashboard)/student/page.tsx` — student dashboard
 - `src/app/[lang]/(dashboard)/institution/page.tsx` — institution dashboard
 - `src/app/[lang]/(dashboard)/teacher/page.tsx` — teacher dashboard
+- `src/components/curriculum/CurriculumBuilder.tsx` — Interactive UI for building program content
+- `src/components/community/DiscussionBoard.tsx` & `Announcements.tsx` — Reusable community layer UI
 
 ---
 

@@ -336,33 +336,45 @@ export type Database = {
       lessons: {
         Row: {
           id: string;
-          created_at: string;
           course_id: string;
           module_id: string | null;
-          title: string;
-          content: string | null;
-          video_url: string | null;
-          order: number;
+          title_fr: string;
+          title_ar: string;
+          type: string | null;
+          content_url: string | null;
+          duration_minutes: number | null;
+          order_index: number | null;
+          published: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
         };
         Insert: {
           id?: string;
-          created_at?: string;
           course_id: string;
           module_id?: string | null;
-          title: string;
-          content?: string | null;
-          video_url?: string | null;
-          order?: number;
+          title_fr: string;
+          title_ar: string;
+          type?: string | null;
+          content_url?: string | null;
+          duration_minutes?: number | null;
+          order_index?: number | null;
+          published?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Update: {
           id?: string;
-          created_at?: string;
           course_id?: string;
           module_id?: string | null;
-          title?: string;
-          content?: string | null;
-          video_url?: string | null;
-          order?: number;
+          title_fr?: string;
+          title_ar?: string;
+          type?: string | null;
+          content_url?: string | null;
+          duration_minutes?: number | null;
+          order_index?: number | null;
+          published?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Relationships: [
           {
