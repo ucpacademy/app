@@ -7,11 +7,27 @@ import { CheckCircle2, Circle, Trash2, Mail, Phone, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { updateInquiryStatus, deleteInquiryAction } from '@/lib/actions';
 
+interface InquiryBranch {
+  slug?: string | null;
+  translations?: Array<{ lang: string; title?: string | null }>;
+}
+
+interface InquiryItem {
+  id: string;
+  status: string;
+  branch?: InquiryBranch | null;
+  created_at: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+}
+
 export function InquiriesList({
   initialInquiries,
   lang,
 }: {
-  initialInquiries: any[];
+  initialInquiries: InquiryItem[];
   lang: Lang;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -94,7 +110,9 @@ export function InquiriesList({
       {optimisticInquiries.map((inquiry) => {
         const isResolved = inquiry.status === 'resolved';
         const branchTitle =
-          inquiry.branch?.translations?.find((t) => t.lang === lang)?.title ||
+          inquiry.branch?.translations?.find(
+            (t: { lang: string; title?: string | null }) => t.lang === lang,
+          )?.title ||
           inquiry.branch?.slug ||
           (lang === 'fr' ? 'Branche inconnue' : 'فرع غير معروف');
 

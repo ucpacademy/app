@@ -10,9 +10,11 @@ import { Card } from '@/components/ui/card';
 export function NewBranchForm({
   lang,
   initialMajorId,
+  majors,
 }: {
   lang: Lang;
   initialMajorId: string;
+  majors: any[];
 }) {
   const supabase = createBrowserSupabaseClient();
   const router = useRouter();
@@ -23,6 +25,18 @@ export function NewBranchForm({
   const [titleAr, setTitleAr] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTitle = e.target.value;
+    setTitleFr(newTitle);
+    setSlug(
+      newTitle
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/[^a-z0-9-]/g, ''), // Remove invalid characters
+    );
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,32 +68,47 @@ export function NewBranchForm({
         )}
         <div>
           <label className="block text-sm font-medium mb-1">
-            {lang === 'fr' ? 'ID de la Filière' : 'معرّف التخصص'}
+            {lang === 'fr' ? 'Filière' : 'التخصص'}
           </label>
-          <input
+          <select
             required
-            className="w-full rounded-xl border border-slate-200 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-500"
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-600 outline-none transition-all"
             value={majorId}
             onChange={(e) => setMajorId(e.target.value)}
-            readOnly={!!initialMajorId}
-          />
+            disabled={!!initialMajorId}
+          >
+            <option value="">
+              {lang === 'fr' ? 'Sélectionnez une filière...' : 'اختر تخصصًا...'}
+            </option>
+            {majors.map((m) => (
+              <option key={m.id} value={m.id}>
+                {lang === 'fr' ? m.name_fr : m.name_ar}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Slug</label>
           <input
             required
-            className="w-full rounded-xl border border-slate-200 px-4 py-2 bg-white dark:bg-slate-900"
+            className="w-full rounded-xl border border-slate-200 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
             value={slug}
             onChange={(e) =>
               setSlug(
                 e.target.value
                   .toLowerCase()
-                  .replace(/[^a-z0-9-]+/g, '')
-                  .replace(/\s+/g, '-'),
+                  .trim()
+                  .replace(/\s+/g, '-')
+                  .replace(/[^a-z0-9-]/g, ''),
               )
             }
             placeholder="ex: sage-femme"
           />
+          <p className="text-xs text-slate-500 mt-1 px-1">
+            {lang === 'fr'
+              ? 'Généré automatiquement à partir du titre, mais peut être modifié.'
+              : 'يتم إنشاؤه تلقائيًا من العنوان، ولكن يمكن تعديله.'}
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -89,7 +118,7 @@ export function NewBranchForm({
             required
             className="w-full rounded-xl border border-slate-200 px-4 py-2 bg-white dark:bg-slate-900"
             value={titleFr}
-            onChange={(e) => setTitleFr(e.target.value)}
+            onChange={handleTitleChange}
           />
         </div>
         <div>

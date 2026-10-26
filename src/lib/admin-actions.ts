@@ -206,7 +206,8 @@ export async function createBlogPost(data: {
 }) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: user } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
     if (!user) return { error: 'Unauthorized' };
 
     const { error } = await supabase.from('blog_posts').insert([

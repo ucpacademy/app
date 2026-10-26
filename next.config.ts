@@ -15,8 +15,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  typedRoutes: false,
   experimental: {
-    typedRoutes: false,
     optimizePackageImports: ['lucide-react', '@tiptap/react'],
   },
   typescript: {

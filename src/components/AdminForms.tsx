@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import type { Dictionary } from '@/utils/dictionary';
 
 export function AdminForms({
@@ -9,7 +9,7 @@ export function AdminForms({
 }: {
   dictionary: Dictionary['admin_forms'];
 }) {
-  const supabase = createClient();
+  const supabase = createBrowserSupabaseClient();
 
   // States for Major
   const [majorSlug, setMajorSlug] = useState('');

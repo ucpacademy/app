@@ -5,7 +5,7 @@ import { type Lang } from '@/lib/i18n';
 export default async function AdminProgramsPage({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ lang: Lang }>;
 }) {
   const { lang } = await params;
   const programs = await getAdminPrograms();

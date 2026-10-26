@@ -3,7 +3,7 @@
 -- 1. Profiles Table (User roles and metadata)
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  role VARCHAR DEFAULT 'student' CHECK (role IN ('student', 'admin', 'moderator', 'teacher', 'institution_admin')),
+  roles TEXT[] DEFAULT '{student}' CHECK (roles <@ ARRAY['student', 'admin', 'moderator', 'teacher', 'institution_admin']::TEXT[]),
   full_name VARCHAR,
   email VARCHAR UNIQUE,
   avatar_url VARCHAR,
@@ -107,6 +107,7 @@ CREATE TABLE programs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   branch_id UUID NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
   institution_id UUID REFERENCES institutions(id) ON DELETE SET NULL,
+  instructor_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   title_fr VARCHAR NOT NULL,
   title_ar VARCHAR NOT NULL,
   description_fr TEXT,
@@ -257,6 +258,28 @@ CREATE TABLE comments (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 11b. Program Announcements Table (Community Layer)
+CREATE TABLE program_announcements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(title) > 3),
+  content TEXT NOT NULL,
+  edited_at TIMESTAMPTZ
+);
+
+-- 11c. Program Posts Table (Discussion Forum / Community Layer)
+CREATE TABLE program_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  program_id UUID NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  parent_post_id UUID REFERENCES program_posts(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  edited_at TIMESTAMPTZ
+);
+
 -- ==================== ADMIN & CONTENT MANAGEMENT ====================
 
 -- 12. Blog Posts Table
@@ -337,6 +360,16 @@ CREATE TABLE contact_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 17. Role Requests Table (For users upgrading to teachers/institutions)
+CREATE TABLE role_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  requested_role VARCHAR NOT NULL CHECK (requested_role IN ('teacher', 'institution_admin', 'moderator')),
+  status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==================== INDEXES FOR PERFORMANCE =====================
 
 CREATE INDEX idx_branches_major_id ON branches(major_id);
@@ -361,6 +394,7 @@ CREATE INDEX idx_events_status ON events(status);
 CREATE INDEX idx_events_event_date ON events(event_date);
 CREATE INDEX idx_event_registrations_event_id ON event_registrations(event_id);
 CREATE INDEX idx_institution_memberships_institution_id ON institution_memberships(institution_id);
+CREATE INDEX idx_programs_instructor_id ON programs(instructor_id);
 CREATE INDEX idx_programs_institution_id ON programs(institution_id);
 CREATE INDEX idx_courses_program_id ON courses(program_id);
 CREATE INDEX idx_course_modules_course_id ON course_modules(course_id);
@@ -368,19 +402,37 @@ CREATE INDEX idx_lessons_course_id ON lessons(course_id);
 CREATE INDEX idx_lessons_module_id ON lessons(module_id);
 CREATE INDEX idx_lesson_progress_user_id ON lesson_progress(user_id);
 CREATE INDEX idx_lesson_progress_lesson_id ON lesson_progress(lesson_id);
+CREATE INDEX idx_role_requests_user_id ON role_requests(user_id);
+CREATE INDEX idx_role_requests_status ON role_requests(status);
+CREATE INDEX idx_program_announcements_program_id ON program_announcements(program_id);
+CREATE INDEX idx_program_posts_program_id ON program_posts(program_id);
+CREATE INDEX idx_program_posts_parent_post_id ON program_posts(parent_post_id);
 
 -- ==================== TRIGGERS & FUNCTIONS ====================
 
 -- Trigger to create profile on auth.users insert
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  requested_role VARCHAR;
+  assigned_roles TEXT[];
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role)
+  requested_role := NEW.raw_user_meta_data->>'role';
+  
+  -- Only allow public signups for specific roles, default to student. 
+  -- Admins and moderators must be manually elevated.
+  IF requested_role IN ('student', 'teacher', 'institution_admin') THEN
+    assigned_roles := ARRAY[requested_role];
+  ELSE
+    assigned_roles := ARRAY['student'];
+  END IF;
+
+  INSERT INTO public.profiles (id, email, full_name, roles)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.user_metadata->>'full_name', ''),
-    'student'
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    assigned_roles
   );
   RETURN NEW;
 END;
@@ -441,6 +493,47 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to safely get user roles without triggering RLS infinite recursion
+CREATE OR REPLACE FUNCTION public.get_user_roles()
+RETURNS TEXT[] AS $$
+  SELECT roles FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Helper function to check if the current user is enrolled in a specific program.
+CREATE OR REPLACE FUNCTION public.is_enrolled(program_id_to_check UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM enrollments
+    WHERE
+      program_id = program_id_to_check AND
+      user_id = auth.uid()
+  );
+$$;
+
+-- Helper function to check if the current user is the owner (instructor or part of institution) of a program.
+CREATE OR REPLACE FUNCTION public.is_program_owner(program_id_to_check UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM programs p
+    LEFT JOIN institution_memberships im ON im.institution_id = p.institution_id
+    WHERE
+      p.id = program_id_to_check AND
+      (
+        p.instructor_id = auth.uid() OR
+        im.user_id = auth.uid()
+      )
+  );
+$$;
+
 -- ==================== ROW LEVEL SECURITY ====================
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -451,24 +544,33 @@ ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lesson_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE institution_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE role_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE program_announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE program_posts ENABLE ROW LEVEL SECURITY;
 
 -- Profiles RLS
 CREATE POLICY "Users can read their own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Admins can read all profiles" ON profiles;
 CREATE POLICY "Admins can read all profiles"
   ON profiles FOR SELECT
-  USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'admin');
+  USING ('admin' = ANY(public.get_user_roles()));
+
+CREATE POLICY "Users can update their own profile"
+  ON profiles FOR UPDATE
+  USING (auth.uid() = id);
 
 -- Inquiries RLS - Users can see their own, admins see all
 CREATE POLICY "Users can see their own inquiries"
   ON inquiries FOR SELECT
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can see all inquiries" ON inquiries;
 CREATE POLICY "Admins can see all inquiries"
   ON inquiries FOR SELECT
-  USING ((SELECT role FROM profiles WHERE id = auth.uid()) IN ('admin', 'moderator'));
+  USING ('admin' = ANY(public.get_user_roles()) OR 'moderator' = ANY(public.get_user_roles()));
 
 -- Enrollments RLS
 CREATE POLICY "Users can see their own enrollments"
@@ -489,3 +591,33 @@ CREATE POLICY "Anyone can read approved reviews"
 CREATE POLICY "Anyone can read approved comments"
   ON comments FOR SELECT
   USING (status = 'approved' OR user_id = auth.uid());
+
+-- Role Requests RLS
+CREATE POLICY "Users can view their own requests"
+  ON role_requests FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can create their own requests"
+  ON role_requests FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Admins can view all requests"
+  ON role_requests FOR SELECT
+  USING ('admin' = ANY(public.get_user_roles()));
+
+CREATE POLICY "Admins can update requests"
+  ON role_requests FOR UPDATE
+  USING ('admin' = ANY(public.get_user_roles()));
+
+-- Program Announcements RLS
+CREATE POLICY "Allow enrolled students to read announcements" ON program_announcements FOR SELECT USING ( public.is_enrolled(program_id) );
+CREATE POLICY "Allow program owners to create announcements" ON program_announcements FOR INSERT WITH CHECK ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow program owners to update announcements" ON program_announcements FOR UPDATE USING ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow program owners to delete announcements" ON program_announcements FOR DELETE USING ( public.is_program_owner(program_id) AND author_id = auth.uid() );
+
+-- Program Posts RLS
+CREATE POLICY "Allow enrolled users to read posts" ON program_posts FOR SELECT USING ( public.is_enrolled(program_id) );
+CREATE POLICY "Allow enrolled users to create posts" ON program_posts FOR INSERT WITH CHECK ( public.is_enrolled(program_id) AND author_id = auth.uid() );
+CREATE POLICY "Allow authors to update their own posts" ON program_posts FOR UPDATE USING ( author_id = auth.uid() );
+CREATE POLICY "Allow authors to delete their own posts" ON program_posts FOR DELETE USING ( author_id = auth.uid() );
+CREATE POLICY "Allow program owners to moderate posts" ON program_posts FOR DELETE USING ( public.is_program_owner(program_id) );

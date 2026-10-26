@@ -1,4 +1,3 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { type Lang } from '@/lib/i18n';
 
 export default async function StudentPage({
@@ -8,15 +7,6 @@ export default async function StudentPage({
 }) {
   const resolvedParams = await params;
   const lang = (resolvedParams?.lang as Lang) || 'fr';
-
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    // let the auth middleware / page handle redirects
-  }
 
   return (
     <div>

@@ -5,7 +5,7 @@ import { NewProgramForm } from './NewProgramForm';
 export default async function AdminNewProgramPage({
   params,
 }: {
-  params: Promise<{ lang: string }>;
+  params: Promise<{ lang: Lang }>;
 }) {
   const { lang } = await params;
   const branches = await getBranches();

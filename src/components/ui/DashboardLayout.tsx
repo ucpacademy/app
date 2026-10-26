@@ -3,13 +3,28 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Menu,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  User,
+  Users,
+} from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import {
+  buildLocalizedPath,
+  getDashboardRoute,
+  getPublicRoute,
+  normalizeLocale,
+} from '@/lib/routes';
 
 export interface NavItem {
   name: string;
-  href: string;
+  href?: string;
   icon: React.ElementType;
+  subItems?: { name: string; href: string }[];
 }
 
 export function DashboardLayout({
@@ -25,9 +40,11 @@ export function DashboardLayout({
 }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileOpen, setMobileOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createBrowserSupabaseClient();
+  const [supabase] = useState(() => createBrowserSupabaseClient());
+  const currentLang = normalizeLocale(lang);
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -35,13 +52,97 @@ export function DashboardLayout({
     setMobileOpen(false);
   }, [pathname]);
 
+  const toggleMenu = (name: string, defaultState: boolean) => {
+    setOpenMenus((prev) => ({
+      ...prev,
+      [name]: prev[name] !== undefined ? !prev[name] : !defaultState,
+    }));
+    if (!isSidebarOpen) setSidebarOpen(true);
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push(`/${lang}/login`);
+    router.push(getPublicRoute(currentLang, 'login'));
+  };
+
+  // Account switcher: detect available roles from user metadata and allow navigation
+  const [availableAccounts, setAvailableAccounts] = useState<string[]>([]);
+  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
+  const [isAccountOpen, setAccountOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!mounted || !user) return;
+
+        const meta = (user.user_metadata as any) || {};
+
+        // Support multiple possible shapes for roles in metadata
+        let roles: string[] = [];
+        if (Array.isArray(meta.roles)) roles = meta.roles;
+        else if (typeof meta.role === 'string') roles = [meta.role];
+        else if (meta.account && typeof meta.account === 'string')
+          roles = [meta.account];
+
+        // Normalize and filter known dashboard roles
+        const known = ['student', 'teacher', 'institution', 'admin'];
+        const filtered = Array.from(
+          new Set(roles.map((r) => String(r).toLowerCase())),
+        ).filter((r) => known.includes(r));
+
+        if (filtered.length > 0) {
+          setAvailableAccounts(filtered);
+          setCurrentAccount((prev) => prev || filtered[0]);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
+
+  const accountToPath = (account: string) => {
+    switch (account) {
+      case 'student':
+        return getDashboardRoute(currentLang, 'student');
+      case 'teacher':
+        return getDashboardRoute(currentLang, 'teacher');
+      case 'institution':
+        return getDashboardRoute(currentLang, 'institution');
+      case 'admin':
+        return getDashboardRoute(currentLang, 'admin');
+      default:
+        return buildLocalizedPath(currentLang, '/');
+    }
+  };
+
+  const handleSwitchAccount = (acc: string) => {
+    setCurrentAccount(acc);
+    setAccountOpen(false);
+    router.push(accountToPath(acc));
+  };
+
+  const accountDisplayName = (acc: string) => {
+    const map: Record<string, { fr: string; ar: string }> = {
+      student: { fr: 'Étudiant', ar: 'طالب' },
+      teacher: { fr: 'Professeur', ar: 'معلم' },
+      institution: { fr: 'Institution', ar: 'مؤسسة' },
+      admin: { fr: 'Admin', ar: 'مسؤول' },
+    };
+    const key = map[acc];
+    if (!key) return acc;
+    return lang === 'fr' ? key.fr : key.ar;
   };
 
   return (
-    <div className="flex flex-1 w-full bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans relative">
+    <div className="fixed inset-0 z-40 flex bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans">
       {/* Mobile Backdrop */}
       {isMobileOpen && (
         <div
@@ -83,11 +184,62 @@ export function DashboardLayout({
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = item.href
+              ? pathname === item.href
+              : item.subItems?.some((sub) => pathname === sub.href);
+            const isMenuOpen = openMenus[item.name] ?? isActive;
+
+            if (item.subItems) {
+              return (
+                <div key={item.name} className="space-y-1">
+                  <button
+                    onClick={() => toggleMenu(item.name, isActive || false)}
+                    className={`flex w-full items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title={!isSidebarOpen ? item.name : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon
+                        className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+                      />
+                      {(isSidebarOpen || isMobileOpen) && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </div>
+                    {(isSidebarOpen || isMobileOpen) && (
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`}
+                      />
+                    )}
+                  </button>
+                  {(isSidebarOpen || isMobileOpen) && isMenuOpen && (
+                    <div className="pl-11 pr-3 space-y-1 py-1">
+                      {item.subItems.map((sub) => (
+                        <Link
+                          key={sub.name}
+                          href={sub.href as any}
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            pathname === sub.href
+                              ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                          }`}
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link
                 key={item.name}
-                href={item.href as any}
+                href={(item.href || '#') as any}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
                   isActive
                     ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium'
@@ -133,12 +285,67 @@ export function DashboardLayout({
               <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-lg sm:text-xl font-semibold text-slate-800 dark:text-white truncate">
-              {navItems.find((item) => item.href === pathname)?.name || title}
+              {navItems
+                .flatMap((item) =>
+                  item.subItems ? [item, ...item.subItems] : [item],
+                )
+                .find((item) => item.href === pathname)?.name || title}
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            {/* Account switcher */}
+            {availableAccounts.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setAccountOpen((s) => !s)}
+                  title={currentAccount || undefined}
+                  className="flex items-center gap-3 px-3 py-2 rounded-md bg-white dark:bg-slate-900 text-sm text-slate-700 dark:text-slate-200 hover:shadow-md transition-all"
+                >
+                  <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-700/30 flex items-center justify-center text-indigo-600 dark:text-indigo-200">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div className="hidden sm:flex flex-col leading-tight">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      {lang === 'fr' ? 'Compte' : 'الحساب'}
+                    </span>
+                    <span className="text-sm font-medium text-slate-900 dark:text-white">
+                      {currentAccount
+                        ? accountDisplayName(currentAccount)
+                        : lang === 'fr'
+                          ? 'Compte'
+                          : 'الحساب'}
+                    </span>
+                  </div>
+                </button>
+
+                {isAccountOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md shadow-xl z-20">
+                    <div className="py-2">
+                      {availableAccounts.map((acc) => (
+                        <button
+                          key={acc}
+                          onClick={() => handleSwitchAccount(acc)}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 ${currentAccount === acc ? 'font-medium text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'}`}
+                        >
+                          <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200">
+                            <Users className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="truncate">
+                              {accountDisplayName(acc)}
+                            </div>
+                            <div className="text-xs text-slate-400">{acc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Link
-              href={`/${lang}` as any}
+              href={buildLocalizedPath(currentLang, '/') as any}
               className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors hidden sm:block"
             >
               {lang === 'fr' ? 'Retourner au site' : 'العودة للموقع'}

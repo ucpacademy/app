@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { type Lang } from '@/lib/i18n';
+import { getAuthRoute, getPostLoginRoute } from '@/lib/domains/auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -11,9 +12,11 @@ import { Loader2 } from 'lucide-react';
 export function AuthForm({
   lang,
   initialMode = 'login',
+  userType = 'student',
 }: {
   lang: Lang;
   initialMode?: 'login' | 'signup';
+  userType?: 'student' | 'institution_admin' | 'admin' | 'teacher';
 }) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
@@ -43,6 +46,7 @@ export function AuthForm({
             data: {
               full_name: name,
               phone: phone,
+              user_type: userType,
             },
             emailRedirectTo: `${window.location.origin}/${lang}/auth/callback`,
           },
@@ -57,7 +61,7 @@ export function AuthForm({
         );
         setMessageType('success');
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -69,8 +73,9 @@ export function AuthForm({
         );
         setMessageType('success');
 
-        // Direct to student area by default, Admin check on layout will take care of Admins navigating elsewhere
-        router.push(`/${lang}/student`);
+        const loggedInUserType =
+          data.user?.user_metadata?.user_type || userType;
+        router.push(getPostLoginRoute(lang, loggedInUserType));
       }
     } catch (err) {
       setMessage(
@@ -86,7 +91,7 @@ export function AuthForm({
     const nextMode = mode === 'login' ? 'signup' : 'login';
     setMode(nextMode);
     setMessage('');
-    router.push(`/${lang}/${nextMode}`);
+    router.push(getAuthRoute(lang, nextMode));
   };
 
   return (
